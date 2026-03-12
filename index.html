@@ -1009,15 +1009,15 @@ function renderTable(mod) {
     const col = avatarColors[i%avatarColors.length];
     const ini = initials(r.name);
     const folioCell = currentUser?.canEdit
-      ? `<span class="folio folio-editable" onclick="editFolio(this,'${r.folio}','${mod}')" title="Click para editar folio">${r.folio||'PENDIENTE'}</span>`
+      ? `<span class="folio folio-editable" onclick="editFolio(this,${r.rowIndex},'${mod}')" title="Click para editar folio">${r.folio||'PENDIENTE'}</span>`
       : `<span class="folio" style="${!r.folio?'color:var(--muted);font-style:italic;':''}">${r.folio||'PENDIENTE'}</span>`;
     const pdfBtn = r.driveURL
-      ? `<div class="action-btn" title="Ver PDF" onclick="openPDF('${r.folio}','${mod}')">↗</div>`
+      ? `<div class="action-btn" title="Ver PDF" onclick="openPDF(${r.rowIndex},'${mod}')">↗</div>`
       : `<div class="action-btn disabled" title="Sin PDF">↗</div>`;
     const editBtn = currentUser?.canEdit
-      ? `<div class="action-btn" title="Cambiar estado" onclick="openModal('${r.folio}','${mod}')">✎</div>` : '';
+      ? `<div class="action-btn" title="Cambiar estado" onclick="openModal(${r.rowIndex},'${mod}')">✎</div>` : '';
     const payBtn = currentUser?.canEdit && r.status !== 'pagado'
-      ? `<div class="action-btn green" title="Marcar pagado" onclick="quickPay('${r.folio}','${mod}')">✓</div>` : '';
+      ? `<div class="action-btn green" title="Marcar pagado" onclick="quickPay(${r.rowIndex},'${mod}')">✓</div>` : '';
     const comunaCell = isVi ? `<td style="color:var(--text2)">${r.comuna}</td>` : '';
     return `<tr>
       <td>${folioCell}</td>
@@ -1043,12 +1043,13 @@ function filterBy(mod, f, el) {
 function searchTable(mod, v) { state[mod].search = v; renderTable(mod); }
 
 // ══ MODAL ═════════════════════════════════════════════════════════════════════
-function openModal(folio, mod) {
+function openModal(rowIndex, mod) {
   if (!currentUser?.canEdit) return;
   const D = getData(mod);
-  const row = D.find(r=>r.folio===folio);
-  modalFolio = folio; modalModule = mod; pendingStatus = row.status;
-  document.getElementById('modalFolio').textContent = folio;
+  const row = D.find(r => r.rowIndex === rowIndex);
+  if (!row) return;
+  modalFolio = rowIndex; modalModule = mod; pendingStatus = row.status;
+  document.getElementById('modalFolio').textContent = row.folio || 'PENDIENTE';
   document.getElementById('modalName').textContent = row.name;
   document.querySelectorAll('.status-opt').forEach(el => {
     el.classList.remove('selected');
@@ -1073,13 +1074,11 @@ function selectOpt(status, el) {
 function saveStatus() {
   if (!modalFolio || !pendingStatus || !modalModule) return;
   const D = getData(modalModule);
-  const row = D.find(r=>r.folio===modalFolio);
+  const row = D.find(r => r.rowIndex === modalFolio);
   if (row) {
     row.status = pendingStatus;
     const url = modalModule==='viaticos' ? CONFIG.appsScriptViaticos : CONFIG.appsScriptLocomocion;
-    if (url) {
-      callSheet(url, { action:'updateStatus', rowIndex: row.rowIndex, status: pendingStatus });
-    }
+    if (url) callSheet(url, { action:'updateStatus', rowIndex: row.rowIndex, status: pendingStatus });
     renderKPIs(modalModule); renderDonut(modalModule); renderTable(modalModule); updatePills();
     const labels = {recepcionado:'Recepcionado',pendiente:'Pendiente de pago',pagado:'Pagado'};
     showToast(`✓ Estado → ${labels[pendingStatus]}`);
@@ -1087,26 +1086,25 @@ function saveStatus() {
   closeModal();
 }
 
-function quickPay(folio, mod) {
+function quickPay(rowIndex, mod) {
   if (!currentUser?.canEdit) return;
   const D = getData(mod);
-  const row = D.find(r=>r.folio===folio);
+  const row = D.find(r => r.rowIndex === rowIndex);
   if (row) {
     row.status = 'pagado';
     const url = mod==='viaticos' ? CONFIG.appsScriptViaticos : CONFIG.appsScriptLocomocion;
-    if (url) {
-      callSheet(url, { action:'updateStatus', rowIndex: row.rowIndex, status: 'pagado' });
-    }
+    if (url) callSheet(url, { action:'updateStatus', rowIndex: row.rowIndex, status: 'pagado' });
     renderKPIs(mod); renderDonut(mod); renderTable(mod); updatePills();
     showToast('✓ Marcado como pagado');
   }
 }
 
 // ══ FOLIO EDIT ════════════════════════════════════════════════════════════════
-function editFolio(span, currentFolio, mod) {
+function editFolio(span, rowIndex, mod) {
   if (!currentUser?.canEdit) return;
   const D = getData(mod);
-  const row = D.find(r=>r.folio===currentFolio);
+  const row = D.find(r => r.rowIndex === rowIndex);
+  if (!row) return;
   const input = document.createElement('input');
   input.className = 'folio-input';
   input.value = (row.folio === 'PENDIENTE' || !row.folio) ? '' : row.folio;
@@ -1115,12 +1113,9 @@ function editFolio(span, currentFolio, mod) {
   input.focus(); input.select();
   function commit() {
     const newVal = input.value.trim() || 'PENDIENTE';
-    if (D.find(r=>r.folio===newVal && r!==row)) { showToast('⚠️ Folio ya existe'); renderTable(mod); return; }
     row.folio = newVal;
     const url = mod==='viaticos' ? CONFIG.appsScriptViaticos : CONFIG.appsScriptLocomocion;
-    if (url) {
-      callSheet(url, { action:'updateFolio', rowIndex: row.rowIndex, folio: newVal });
-    }
+    if (url) callSheet(url, { action:'updateFolio', rowIndex: row.rowIndex, folio: newVal });
     renderTable(mod);
     showToast(`✓ Folio → ${newVal}`);
   }
@@ -1129,18 +1124,18 @@ function editFolio(span, currentFolio, mod) {
 }
 
 // ══ PDF VIEWER ════════════════════════════════════════════════════════════════
-function openPDF(folio, mod) {
+function openPDF(rowIndex, mod) {
   const D = getData(mod);
-  const row = D.find(r=>r.folio===folio);
+  const row = D.find(r => r.rowIndex === rowIndex);
   if (!row || !row.driveURL) return;
-  document.getElementById('pdfModalTitle').textContent = `PDF · ${row.name} · ${row.folio}`;
+  document.getElementById('pdfModalTitle').textContent = `PDF · ${row.name} · ${row.folio || 'PENDIENTE'}`;
   document.getElementById('pdfOpenDrive').href = row.driveURL;
   const wrap = document.getElementById('pdfFrameWrap');
   const driveMatch = row.driveURL.match(/\/file\/d\/([^\/]+)/);
   if (driveMatch) {
     wrap.innerHTML = `<iframe src="https://drive.google.com/file/d/${driveMatch[1]}/preview" allowfullscreen></iframe>`;
   } else {
-    wrap.innerHTML = `<div class="pdf-placeholder"><div class="pdf-placeholder-icon">📄</div><div class="pdf-placeholder-text">${row.folio} · ${row.name}</div><button class="pdf-open-btn" onclick="window.open('${row.driveURL}','_blank')">↗ Abrir en Drive</button></div>`;
+    wrap.innerHTML = `<div class="pdf-placeholder"><div class="pdf-placeholder-icon">📄</div><div class="pdf-placeholder-text">${row.folio||'PENDIENTE'} · ${row.name}</div><button class="pdf-open-btn" onclick="window.open('${row.driveURL}','_blank')">↗ Abrir en Drive</button></div>`;
   }
   document.getElementById('pdfModal').classList.add('open');
 }
