@@ -355,11 +355,9 @@ td { padding:11px 16px; font-size:12.5px; }
     <div class="nav" id="sideNav">
       <div class="nav-section">Panel</div>
       <div class="nav-item active vi" id="navDash"><span class="nav-icon">◈</span><span>Dashboard</span></div>
-      <div class="nav-item vi" id="navHist"><span class="nav-icon">≡</span><span>Historial</span></div>
-      <div class="nav-item vi" id="navNew" onclick="openForm()"><span class="nav-icon">＋</span><span>Nueva rendición</span></div>
+      <div class="nav-item vi" id="navNew" onclick="openForm('viaticos')"><span class="nav-icon">＋</span><span>Nueva rendición</span></div>
       <div class="nav-section" style="margin-top:8px">Reportes</div>
-      <div class="nav-item vi"><span class="nav-icon">⊙</span><span>Por persona</span></div>
-      <div class="nav-item vi"><span class="nav-icon">↗</span><span>Exportar</span></div>
+      <div class="nav-item vi" onclick="generarReportePDF()"><span class="nav-icon">⊙</span><span>Por ejecutivo</span></div>
     </div>
 
     <div class="sidebar-user">
@@ -564,7 +562,7 @@ td { padding:11px 16px; font-size:12.5px; }
 // ══ CONFIG ═══════════════════════════════════════════════════════════════════
 const CONFIG = {
   empresa: 'CDN Sercotec La Serena',
-  formURLViaticos:      'https://forms.google.com',  // ← pega URL Google Form Viáticos
+  formURLViaticos:      'https://forms.gle/qbJWjSF4mLXyRcHT8',
   formURLLocomocion:    'https://forms.google.com',  // ← pega URL Google Form Locomoción
   appsScriptViaticos:   'https://script.google.com/macros/s/AKfycbxihKcFeXfG7OHNphPrwzUVDl8dwcuPQh0gnHMtd94hvdLGPeU4Zia9eDk7_prW7b2R/exec',
   appsScriptLocomocion: '',  // ← se conectará después
@@ -681,6 +679,120 @@ function updatePills() {
   document.getElementById('pillLocomocion').textContent = loPending;
 }
 
+function generarReportePDF() {
+  const D = DATA_VI;
+  if (!D || D.length === 0) { showToast('⚠ Sin datos para generar reporte'); return; }
+
+  // Agrupar por ejecutivo
+  const ejecutivos = {};
+  D.forEach(r => {
+    if (!ejecutivos[r.name]) ejecutivos[r.name] = { name: r.name, rows: [] };
+    ejecutivos[r.name].rows.push(r);
+  });
+
+  const fmtCLP = v => v ? `$${Number(v).toLocaleString('es-CL')}` : '$0';
+  const estadoLabel = { recepcionado: 'Recepcionado', pendiente: 'Pendiente de pago', pagado: 'Pagado' };
+  const estadoColor = { recepcionado: '#1565c0', pendiente: '#b45309', pagado: '#2e7d52' };
+  const today = new Date().toLocaleDateString('es-CL', { day:'2-digit', month:'long', year:'numeric' });
+
+  // Construir HTML del reporte
+  let html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+  <title>Reporte por Ejecutivo · Viáticos CDN Sercotec</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: Arial, sans-serif; font-size: 12px; color: #1a1f36; background: #fff; padding: 32px; }
+    .header { border-bottom: 3px solid #d32f2f; padding-bottom: 16px; margin-bottom: 24px; display:flex; justify-content:space-between; align-items:flex-end; }
+    .header h1 { font-size: 20px; color: #1565c0; font-weight: 700; }
+    .header p { font-size: 11px; color: #8892b0; margin-top: 4px; }
+    .header .fecha { font-size: 11px; color: #8892b0; text-align:right; }
+    .ejecutivo { margin-bottom: 32px; page-break-inside: avoid; }
+    .ejecutivo-header { background: #f0f2f8; border-left: 4px solid #1565c0; padding: 10px 14px; margin-bottom: 10px; border-radius: 0 6px 6px 0; }
+    .ejecutivo-header h2 { font-size: 14px; color: #1a1f36; font-weight: 700; }
+    .resumen { display: flex; gap: 12px; margin-bottom: 10px; }
+    .kpi { background: #f8f9ff; border: 1px solid #dde1ee; border-radius: 6px; padding: 8px 14px; flex: 1; }
+    .kpi label { font-size: 9px; color: #8892b0; text-transform: uppercase; letter-spacing: 0.5px; display:block; }
+    .kpi span { font-size: 15px; font-weight: 700; color: #1565c0; }
+    table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    th { background: #1565c0; color: white; padding: 7px 10px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px; }
+    td { padding: 6px 10px; border-bottom: 1px solid #eef0f7; }
+    tr:nth-child(even) td { background: #f8f9ff; }
+    .badge { display:inline-block; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 600; color: white; }
+    .footer { margin-top: 40px; border-top: 1px solid #dde1ee; padding-top: 12px; font-size: 10px; color: #8892b0; text-align: center; }
+    @media print { body { padding: 16px; } .no-print { display:none; } }
+  </style></head><body>
+  <div class="no-print" style="text-align:center;margin-bottom:20px;">
+    <button onclick="window.print()" style="background:#1565c0;color:white;border:none;padding:10px 28px;border-radius:6px;font-size:13px;cursor:pointer;font-weight:600;">⬇ Descargar / Imprimir PDF</button>
+  </div>
+  <div class="header">
+    <div>
+      <h1>Reporte de Viáticos por Ejecutivo</h1>
+      <p>CDN Sercotec La Serena · Panel de Rendiciones</p>
+    </div>
+    <div class="fecha">Generado el ${today}</div>
+  </div>`;
+
+  Object.values(ejecutivos).forEach(ej => {
+    const total    = ej.rows.length;
+    const monto    = ej.rows.reduce((a,r) => a + (r.amount||0), 0);
+    const recep    = ej.rows.filter(r => r.status === 'recepcionado').length;
+    const pend     = ej.rows.filter(r => r.status === 'pendiente').length;
+    const pagado   = ej.rows.filter(r => r.status === 'pagado').length;
+
+    html += `<div class="ejecutivo">
+      <div class="ejecutivo-header">
+        <h2>👤 ${ej.name}</h2>
+      </div>
+      <div class="resumen">
+        <div class="kpi"><label>Total rendiciones</label><span>${total}</span></div>
+        <div class="kpi"><label>Monto total</label><span>${fmtCLP(monto)}</span></div>
+        <div class="kpi"><label>Recepcionadas</label><span style="color:#1565c0">${recep}</span></div>
+        <div class="kpi"><label>Pendientes de pago</label><span style="color:#b45309">${pend}</span></div>
+        <div class="kpi"><label>Pagadas</label><span style="color:#2e7d52">${pagado}</span></div>
+      </div>
+      <table>
+        <thead><tr>
+          <th>Folio</th><th>Comuna</th><th>Fecha actividad</th><th>Fecha creación</th><th>Monto</th><th>Estado</th>
+        </tr></thead>
+        <tbody>`;
+
+    ej.rows.forEach(r => {
+      const folio = r.folio || 'PENDIENTE';
+      const color = estadoColor[r.status] || '#8892b0';
+      html += `<tr>
+        <td style="font-family:monospace;font-size:10px">${folio}</td>
+        <td>${r.comuna || '—'}</td>
+        <td>${r.fechaAct || '—'}</td>
+        <td>${r.fechaCreate || '—'}</td>
+        <td style="font-weight:600">${fmtCLP(r.amount)}</td>
+        <td><span class="badge" style="background:${color}">${estadoLabel[r.status] || r.status}</span></td>
+      </tr>`;
+    });
+
+    html += `</tbody></table></div>`;
+  });
+
+  // Resumen global al final
+  const totalGlobal = D.length;
+  const montoGlobal = D.reduce((a,r) => a + (r.amount||0), 0);
+  html += `
+  <div style="background:#f0f2f8;border-radius:8px;padding:14px 18px;margin-top:8px;">
+    <strong style="font-size:13px">Resumen global · Viáticos</strong>
+    <div style="display:flex;gap:24px;margin-top:8px;font-size:12px;">
+      <span>Total rendiciones: <strong>${totalGlobal}</strong></span>
+      <span>Monto total: <strong>${fmtCLP(montoGlobal)}</strong></span>
+      <span>Ejecutivos: <strong>${Object.keys(ejecutivos).length}</strong></span>
+    </div>
+  </div>
+  <div class="footer">CDN Sercotec La Serena · Reporte generado automáticamente desde el Panel de Rendiciones</div>
+  </body></html>`;
+
+  // Abrir en nueva ventana para imprimir/guardar como PDF
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+  showToast('✓ Reporte generado — usa Ctrl+P para guardar como PDF');
+}
+
 function openForm(mod) {
   mod = mod || activeModule;
   const url = mod === 'viaticos' ? CONFIG.formURLViaticos : CONFIG.formURLLocomocion;
@@ -795,25 +907,46 @@ function renderKPIs(mod) {
 
 // ══ BAR CHART ═════════════════════════════════════════════════════════════════
 function renderBarChart(mod) {
-  const months = ['Ene','Feb','Mar','Abr','May','Jun'];
-  const viVals = [480000,620000,950000,530000,1280000,960000];
-  const loVals = [42000, 55000, 78000, 49000,  98000, 72000];
-  const vals = mod === 'viaticos' ? viVals : loVals;
+  const D = getData(mod);
   const color1 = mod === 'viaticos' ? 'var(--blue-soft)' : 'var(--red-mid)';
   const color2 = mod === 'viaticos' ? 'var(--blue)'      : 'var(--red)';
-  const max = Math.max(...vals);
-  const fmtTag = v => v >= 1000000 ? `$${(v/1000000).toFixed(1)}M` : `$${(v/1000).toFixed(0)}K`;
   const p = mod === 'viaticos' ? 'vi' : 'lo';
   const wrap = document.getElementById(`${p}_barChart`);
-  wrap.innerHTML = months.map((m,i) => {
-    const pct = Math.max(Math.round(vals[i]/max*100), 5);
-    return `<div style="position:relative;flex:1;height:100%;display:flex;flex-direction:column;align-items:center;">
+  const monthNames = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+  // Agrupar montos por mes usando fechaAct real
+  const totals = {};
+  D.forEach(r => {
+    if (!r.fechaAct) return;
+    const parts = r.fechaAct.match(/(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})/);
+    if (!parts) return;
+    const mes  = parseInt(parts[2], 10) - 1;
+    const anio = parts[3];
+    const key  = `${anio}-${String(mes+1).padStart(2,'0')}`;
+    if (!totals[key]) totals[key] = { mes, anio, total: 0 };
+    totals[key].total += r.amount || 0;
+  });
+
+  const keys = Object.keys(totals).sort();
+  if (keys.length === 0) {
+    wrap.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;width:100%;color:var(--muted);font-size:12px;font-family:'DM Mono',monospace;">Sin datos</div>`;
+    return;
+  }
+
+  const vals   = keys.map(k => totals[k].total);
+  const labels = keys.map(k => monthNames[totals[k].mes]);
+  const max    = Math.max(...vals) || 1;
+  const fmtTag = v => v >= 1000000 ? `$${(v/1000000).toFixed(1)}M` : v >= 1000 ? `$${(v/1000).toFixed(0)}K` : `$${v}`;
+
+  wrap.innerHTML = keys.map((k, i) => {
+    const pct = Math.max(Math.round(vals[i] / max * 100), 5);
+    return `<div style="position:relative;flex:1;height:100%;display:flex;flex-direction:column;align-items:center;min-width:36px;">
       <div style="position:absolute;bottom:20px;left:0;right:0;top:0;display:flex;align-items:flex-end;">
         <div style="width:100%;height:${pct}%;background:linear-gradient(180deg,${color1},${color2});border-radius:5px 5px 0 0;position:relative;min-height:4px;cursor:pointer;transition:opacity 0.15s;" onmouseover="this.style.opacity=0.72" onmouseout="this.style.opacity=1">
           <div style="position:absolute;top:-22px;left:50%;transform:translateX(-50%);font-size:9px;font-family:'DM Mono',monospace;color:var(--text2);white-space:nowrap;background:var(--surface2);padding:2px 6px;border-radius:4px;border:1px solid var(--border);">${fmtTag(vals[i])}</div>
         </div>
       </div>
-      <div style="position:absolute;bottom:2px;font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;">${m}</div>
+      <div style="position:absolute;bottom:2px;font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;">${labels[i]}</div>
     </div>`;
   }).join('');
 }
