@@ -321,7 +321,7 @@ td { padding:11px 16px; font-size:12.5px; }
     </div>
     <button class="login-btn" onclick="doLogin()">Ingresar al sistema</button>
     <div class="login-error" id="loginError">Usuario o contraseña incorrectos</div>
-    <div class="login-hint">Sistema interno · CDN Sercotec La Serena</div>
+    <div class="login-hint">Sistema interno v3.1 · CDN Sercotec La Serena<br>Desarrollado por Edgar Salinas</div>
   </div>
 </div>
 
@@ -383,7 +383,7 @@ td { padding:11px 16px; font-size:12.5px; }
         </div>
         <div style="margin-left:auto;display:flex;gap:8px;">
           <button class="btn btn-ghost" style="font-size:11.5px" onclick="loadFromSheet('viaticos')" title="Recargar datos desde Sheet">↺ Actualizar</button>
-          <button class="btn btn-ghost" style="font-size:11.5px">⬇ Exportar</button>
+          <button class="btn btn-ghost" style="font-size:11.5px" onclick="exportarDashboard('viaticos')">⬇ Exportar</button>
           <button class="btn btn-blue" onclick="openForm('viaticos')">＋ Nueva rendición</button>
         </div>
       </div>
@@ -452,7 +452,7 @@ td { padding:11px 16px; font-size:12.5px; }
           <div class="module-strip-sub" style="color:var(--red-mid)">Control de gastos de transporte y movilización</div>
         </div>
         <div style="margin-left:auto;display:flex;gap:8px;">
-          <button class="btn btn-ghost" style="font-size:11.5px">⬇ Exportar</button>
+          <button class="btn btn-ghost" style="font-size:11.5px" onclick="exportarDashboard('locomocion')">⬇ Exportar</button>
           <button class="btn btn-red" onclick="openForm('locomocion')">＋ Nueva rendición</button>
         </div>
       </div>
@@ -677,6 +677,135 @@ function updatePills() {
   const loPending = DATA_LO.filter(r=>r.status!=='pagado').length;
   document.getElementById('pillViaticos').textContent = viPending;
   document.getElementById('pillLocomocion').textContent = loPending;
+}
+
+function exportarDashboard(mod) {
+  const D = getData(mod);
+  if (!D || D.length === 0) { showToast('⚠ Sin datos para exportar'); return; }
+
+  const fmtCLP  = v => v ? `$${Number(v).toLocaleString('es-CL')}` : '$0';
+  const estadoLabel = { recepcionado:'Recepcionado', pendiente:'Pendiente de pago', pagado:'Pagado' };
+  const estadoColor = { recepcionado:'#1565c0', pendiente:'#b45309', pagado:'#2e7d52' };
+  const modLabel    = mod === 'viaticos' ? 'Viáticos' : 'Locomoción';
+  const accentColor = mod === 'viaticos' ? '#1565c0' : '#d32f2f';
+  const today = new Date().toLocaleDateString('es-CL', { day:'2-digit', month:'long', year:'numeric' });
+
+  // KPIs
+  const total  = D.length;
+  const recep  = D.filter(r => r.status === 'recepcionado');
+  const pend   = D.filter(r => r.status === 'pendiente');
+  const pagado = D.filter(r => r.status === 'pagado');
+  const montoTotal = D.reduce((a,r) => a + (r.amount||0), 0);
+  const montoPagado = pagado.reduce((a,r) => a + (r.amount||0), 0);
+
+  // Resumen por mes para gráfico de texto
+  const monthNames = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const totales = {};
+  D.forEach(r => {
+    if (!r.fechaAct) return;
+    const parts = r.fechaAct.match(/(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})/);
+    if (!parts) return;
+    const mes = parseInt(parts[2],10) - 1;
+    const key = `${parts[3]}-${String(mes+1).padStart(2,'0')}`;
+    if (!totales[key]) totales[key] = { mes, total:0, count:0 };
+    totales[key].total += r.amount||0;
+    totales[key].count++;
+  });
+  const mesKeys  = Object.keys(totales).sort();
+  const mesMax   = Math.max(...mesKeys.map(k => totales[k].total)) || 1;
+
+  // Tabla de registros
+  const isVi = mod === 'viaticos';
+
+  let html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+  <title>Dashboard ${modLabel} · CDN Sercotec La Serena</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:Arial,sans-serif; font-size:12px; color:#1a1f36; background:#fff; padding:28px; }
+    .no-print { text-align:center; margin-bottom:20px; }
+    .no-print button { background:${accentColor};color:white;border:none;padding:10px 28px;border-radius:6px;font-size:13px;cursor:pointer;font-weight:600; }
+    .header { border-bottom:3px solid ${accentColor}; padding-bottom:14px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:flex-end; }
+    .header h1 { font-size:18px; color:${accentColor}; font-weight:700; }
+    .header p  { font-size:11px; color:#8892b0; margin-top:3px; }
+    .header .fecha { font-size:11px; color:#8892b0; text-align:right; }
+    .kpis { display:flex; gap:10px; margin-bottom:20px; }
+    .kpi  { flex:1; border:1px solid #dde1ee; border-radius:8px; padding:10px 14px; background:#f8f9ff; }
+    .kpi label { font-size:9px; color:#8892b0; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:3px; }
+    .kpi .val  { font-size:18px; font-weight:700; color:${accentColor}; }
+    .kpi .sub  { font-size:10px; color:#8892b0; margin-top:2px; }
+    .section-title { font-size:13px; font-weight:700; color:#1a1f36; margin:20px 0 10px; border-left:3px solid ${accentColor}; padding-left:8px; }
+    .bar-table { width:100%; border-collapse:collapse; margin-bottom:20px; }
+    .bar-table td { padding:4px 8px; vertical-align:middle; font-size:11px; }
+    .bar-bg { background:#f0f2f8; border-radius:4px; height:16px; width:100%; }
+    .bar-fill { background:${accentColor}; border-radius:4px; height:16px; }
+    table.data { width:100%; border-collapse:collapse; font-size:11px; }
+    table.data th { background:${accentColor}; color:white; padding:7px 10px; text-align:left; font-size:10px; text-transform:uppercase; }
+    table.data td { padding:6px 10px; border-bottom:1px solid #eef0f7; }
+    table.data tr:nth-child(even) td { background:#f8f9ff; }
+    .badge { display:inline-block; padding:2px 8px; border-radius:12px; font-size:10px; font-weight:600; color:white; }
+    .footer { margin-top:32px; border-top:1px solid #dde1ee; padding-top:10px; font-size:10px; color:#8892b0; text-align:center; }
+    @media print { .no-print { display:none; } body { padding:16px; } }
+  </style></head><body>
+  <div class="no-print">
+    <button onclick="window.print()">⬇ Descargar / Imprimir PDF</button>
+  </div>
+  <div class="header">
+    <div>
+      <h1>Dashboard de ${modLabel}</h1>
+      <p>CDN Sercotec La Serena · Panel de Rendiciones</p>
+    </div>
+    <div class="fecha">Generado el ${today}</div>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><label>Total rendiciones</label><div class="val">${total}</div><div class="sub">${recep.length + pend.length} sin pagar</div></div>
+    <div class="kpi"><label>Monto total</label><div class="val">${fmtCLP(montoTotal)}</div></div>
+    <div class="kpi"><label>Recepcionadas</label><div class="val" style="color:#1565c0">${recep.length}</div><div class="sub">Pendientes de revisión</div></div>
+    <div class="kpi"><label>Pendientes de pago</label><div class="val" style="color:#b45309">${pend.length}</div><div class="sub">En área financiera</div></div>
+    <div class="kpi"><label>Pagadas</label><div class="val" style="color:#2e7d52">${pagado.length}</div><div class="sub">${fmtCLP(montoPagado)}</div></div>
+  </div>
+
+  <div class="section-title">Distribución mensual</div>
+  <table class="bar-table">`;
+
+  mesKeys.forEach(k => {
+    const pct = Math.round(totales[k].total / mesMax * 100);
+    html += `<tr>
+      <td style="width:60px;color:#8892b0">${monthNames[totales[k].mes]}</td>
+      <td><div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div></td>
+      <td style="width:100px;text-align:right;font-weight:600">${fmtCLP(totales[k].total)}</td>
+      <td style="width:60px;text-align:right;color:#8892b0">${totales[k].count} reg.</td>
+    </tr>`;
+  });
+
+  html += `</table>
+  <div class="section-title">Detalle de rendiciones</div>
+  <table class="data"><thead><tr>
+    <th>Folio</th><th>Emisor</th>${isVi ? '<th>Comuna</th>' : ''}
+    <th>Fecha actividad</th><th>Fecha creación</th><th>Monto</th><th>Estado</th>
+  </tr></thead><tbody>`;
+
+  D.forEach(r => {
+    const color = estadoColor[r.status] || '#8892b0';
+    html += `<tr>
+      <td style="font-family:monospace;font-size:10px">${r.folio||'PENDIENTE'}</td>
+      <td>${r.name}</td>
+      ${isVi ? `<td>${r.comuna||'—'}</td>` : ''}
+      <td>${r.fechaAct||'—'}</td>
+      <td>${r.fechaCreate||'—'}</td>
+      <td style="font-weight:600">${fmtCLP(r.amount)}</td>
+      <td><span class="badge" style="background:${color}">${estadoLabel[r.status]||r.status}</span></td>
+    </tr>`;
+  });
+
+  html += `</tbody></table>
+  <div class="footer">CDN Sercotec La Serena · v3.1 Sistema de Rendiciones · Desarrollado por Edgar Salinas</div>
+  </body></html>`;
+
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+  showToast('✓ Dashboard exportado — usa Ctrl+P para guardar como PDF');
 }
 
 function generarReportePDF() {
