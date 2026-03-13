@@ -321,7 +321,7 @@ td { padding:11px 16px; font-size:12.5px; }
     </div>
     <button class="login-btn" onclick="doLogin()">Ingresar al sistema</button>
     <div class="login-error" id="loginError">Usuario o contraseña incorrectos</div>
-    <div class="login-hint">Sistema desarrollado por Edgar Salinas<br>Versión 3.3</div>
+    <div class="login-hint">Sistema desarrollado por Edgar Salinas<br>Versión 3.5</div>
   </div>
 </div>
 
@@ -586,6 +586,23 @@ td { padding:11px 16px; font-size:12.5px; }
         </div>
       </div>
       <div style="margin-top:8px;font-size:10px;color:var(--muted);font-family:'DM Mono',monospace" id="reporteConteo">— registros en el período seleccionado</div>
+      <div style="margin-top:14px;">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:0.5px">Filtrar por estado</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;padding:5px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);">
+            <input type="checkbox" name="reporteEstado" value="todos" id="rEstTodos" checked onchange="toggleEstadoTodos(this)" style="accent-color:var(--blue)"> Todos
+          </label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;padding:5px 10px;border:1.5px solid #1565c020;border-radius:8px;background:#1565c008;">
+            <input type="checkbox" name="reporteEstado" value="recepcionado" id="rEstRecep" onchange="actualizarConteoReporte()" style="accent-color:#1565c0"> <span style="color:#1565c0">Recepcionadas</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;padding:5px 10px;border:1.5px solid #b4530920;border-radius:8px;background:#b4530908;">
+            <input type="checkbox" name="reporteEstado" value="pendiente" id="rEstPend" onchange="actualizarConteoReporte()" style="accent-color:#b45309"> <span style="color:#b45309">Pendientes</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;padding:5px 10px;border:1.5px solid #2e7d5220;border-radius:8px;background:#2e7d5208;">
+            <input type="checkbox" name="reporteEstado" value="pagado" id="rEstPagado" onchange="actualizarConteoReporte()" style="accent-color:#2e7d52"> <span style="color:#2e7d52">Pagadas</span>
+          </label>
+        </div>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="modal-btn modal-cancel" onclick="closeReporteModal()">Cancelar</button>
@@ -734,18 +751,19 @@ function updatePills() {
   document.getElementById('pillLocomocion').textContent = loPending;
 }
 
-function exportarDashboard(mod, datosIn, periodoLabel, campoLabel) {
+function exportarDashboard(mod, datosIn, periodoLabel, campoLabel, estadoLabel) {
   const D = datosIn || getData(mod);
   if (!D || D.length === 0) { showToast('⚠ Sin datos para exportar'); return; }
 
   const fmtCLP  = v => v ? `$${Number(v).toLocaleString('es-CL')}` : '$0';
-  const estadoLabel = { recepcionado:'Recepcionado', pendiente:'Pendiente de pago', pagado:'Pagado' };
+  const estadoLabelMap = { recepcionado:'Recepcionado', pendiente:'Pendiente de pago', pagado:'Pagado' };
   const estadoColor = { recepcionado:'#1565c0', pendiente:'#b45309', pagado:'#2e7d52' };
   const modLabel    = mod === 'viaticos' ? 'Viáticos' : 'Locomoción';
   const accentColor = mod === 'viaticos' ? '#1565c0' : '#d32f2f';
   const today = new Date().toLocaleDateString('es-CL', { day:'2-digit', month:'long', year:'numeric' });
   const periodoStr = periodoLabel ? `<span style="font-size:11px;color:#8892b0"> ${periodoLabel}</span>` : '';
   const campoStr   = campoLabel   ? ` · Filtrado por ${campoLabel}` : '';
+  const estadoStr  = estadoLabel && estadoLabel !== 'Todos los estados' ? ` · Estado: ${estadoLabel}` : '';
 
   // KPIs
   const total  = D.length;
@@ -809,7 +827,7 @@ function exportarDashboard(mod, datosIn, periodoLabel, campoLabel) {
   <div class="header">
     <div>
       <h1>Dashboard de ${modLabel}${periodoStr}</h1>
-      <p>CDN Sercotec La Serena · Panel de Rendiciones${campoStr}</p>
+      <p>CDN Sercotec La Serena · Panel de Rendiciones${campoStr}${estadoStr}</p>
     </div>
     <div class="fecha">Generado el ${today}</div>
   </div>
@@ -851,12 +869,12 @@ function exportarDashboard(mod, datosIn, periodoLabel, campoLabel) {
       <td>${r.fechaAct||'—'}</td>
       <td>${r.fechaCreate||'—'}</td>
       <td style="font-weight:600">${fmtCLP(r.amount)}</td>
-      <td><span class="badge" style="background:${color}">${estadoLabel[r.status]||r.status}</span></td>
+      <td><span class="badge" style="background:${estadoColor[r.status]||'#8892b0'}">${estadoLabelMap[r.status]||r.status}</span></td>
     </tr>`;
   });
 
   html += `</tbody></table>
-  <div class="footer">CDN Sercotec La Serena · v3.1 Sistema de Rendiciones · Desarrollado por Edgar Salinas</div>
+  <div class="footer">CDN Sercotec La Serena - Sistema de Rendiciones desarrollado por Edgar Salinas - Versión 3.5</div>
   </body></html>`;
 
   const win = window.open('', '_blank');
@@ -867,35 +885,54 @@ function exportarDashboard(mod, datosIn, periodoLabel, campoLabel) {
 
 let reporteTipo = null; // 'ejecutivo' | 'general'
 
+function toggleEstadoTodos(el) {
+  const checks = document.querySelectorAll('input[name="reporteEstado"]:not(#rEstTodos)');
+  checks.forEach(c => c.checked = false);
+  el.checked = true;
+  actualizarConteoReporte();
+}
+
+function getEstadosFiltro() {
+  if (document.getElementById('rEstTodos')?.checked) return null; // null = todos
+  const sel = [...document.querySelectorAll('input[name="reporteEstado"]:not(#rEstTodos):checked')].map(c => c.value);
+  return sel.length ? sel : null;
+}
+
 function abrirReporteModal(tipo) {
   reporteTipo = tipo;
   document.getElementById('reporteModalTitle').textContent =
-    tipo === 'ejecutivo' ? 'Reporte por Ejecutivo · Período' : 'Reporte General · Período';
+    tipo === 'ejecutivo' ? 'Reporte por Ejecutivo · Filtros' : 'Reporte General · Filtros';
   document.getElementById('reporteDesde').value = '';
   document.getElementById('reporteHasta').value = '';
   document.getElementById('rFechaAct').checked = true;
+  document.getElementById('rEstTodos').checked = true;
+  ['rEstRecep','rEstPend','rEstPagado'].forEach(id => { document.getElementById(id).checked = false; });
   actualizarConteoReporte();
   document.getElementById('reporteModal').classList.add('open');
-  document.getElementById('reporteDesde').addEventListener('change', actualizarConteoReporte);
-  document.getElementById('reporteHasta').addEventListener('change', actualizarConteoReporte);
+  ['reporteDesde','reporteHasta'].forEach(id =>
+    document.getElementById(id).addEventListener('change', actualizarConteoReporte));
   document.querySelectorAll('input[name="reporteFecha"]').forEach(r =>
     r.addEventListener('change', actualizarConteoReporte));
 }
 
 function actualizarConteoReporte() {
+  // Si se marca un estado específico, desmarcar "Todos"
+  const todosEl = document.getElementById('rEstTodos');
+  const specifics = [...document.querySelectorAll('input[name="reporteEstado"]:not(#rEstTodos):checked')];
+  if (specifics.length > 0) todosEl.checked = false;
+  if (specifics.length === 0) todosEl.checked = true;
+
   const desde  = document.getElementById('reporteDesde').value;
   const hasta  = document.getElementById('reporteHasta').value;
   const campo  = document.querySelector('input[name="reporteFecha"]:checked')?.value || 'fechaAct';
-  const datos  = filtrarDatosReporte(DATA_VI, desde, hasta, campo);
+  const estados = getEstadosFiltro();
+  const datos  = filtrarDatosReporte(DATA_VI, desde, hasta, campo, estados);
   const el     = document.getElementById('reporteConteo');
-  if (!desde && !hasta) {
-    el.textContent = `${DATA_VI.length} registros en total (sin filtro de período)`;
-  } else {
-    el.textContent = `${datos.length} registros en el período seleccionado`;
-  }
+  const total  = DATA_VI.length;
+  el.textContent = `${datos.length} de ${total} registros con los filtros aplicados`;
 }
 
-function filtrarDatosReporte(D, desde, hasta, campo) {
+function filtrarDatosReporte(D, desde, hasta, campo, estados) {
   let rows = [...D];
   const getF = r => campo === 'fechaAct' ? r.fechaAct : r.fechaCreate;
   if (desde) {
@@ -903,9 +940,11 @@ function filtrarDatosReporte(D, desde, hasta, campo) {
     rows = rows.filter(r => { const f = parseDate(getF(r)); return f && f >= d; });
   }
   if (hasta) {
-    const h = new Date(hasta);
-    h.setHours(23,59,59);
+    const h = new Date(hasta); h.setHours(23,59,59);
     rows = rows.filter(r => { const f = parseDate(getF(r)); return f && f <= h; });
+  }
+  if (estados && estados.length) {
+    rows = rows.filter(r => estados.includes(r.status));
   }
   return rows;
 }
@@ -916,21 +955,23 @@ function closeReporteModal() {
 }
 
 function ejecutarReporte() {
-  const desde = document.getElementById('reporteDesde').value;
-  const hasta = document.getElementById('reporteHasta').value;
-  const campo = document.querySelector('input[name="reporteFecha"]:checked')?.value || 'fechaAct';
-  const datos = filtrarDatosReporte(DATA_VI, desde, hasta, campo);
-  if (datos.length === 0) { showToast('⚠ Sin registros en el período seleccionado'); return; }
+  const desde  = document.getElementById('reporteDesde').value;
+  const hasta  = document.getElementById('reporteHasta').value;
+  const campo  = document.querySelector('input[name="reporteFecha"]:checked')?.value || 'fechaAct';
+  const estados = getEstadosFiltro();
+  const datos  = filtrarDatosReporte(DATA_VI, desde, hasta, campo, estados);
+  if (datos.length === 0) { showToast('⚠ Sin registros con los filtros seleccionados'); return; }
   closeReporteModal();
   const periodoLabel = desde || hasta
     ? ` · ${desde ? desde.split('-').reverse().join('/') : '…'} → ${hasta ? hasta.split('-').reverse().join('/') : '…'}`
-    : ' · Todos los registros';
+    : '';
   const campoLabel = campo === 'fechaAct' ? 'Fecha actividad' : 'Fecha creación';
-  if (reporteTipo === 'ejecutivo') generarReportePDF(datos, periodoLabel, campoLabel);
-  else exportarDashboard('viaticos', datos, periodoLabel, campoLabel);
+  const estadoLabel = estados ? estados.map(e => ({recepcionado:'Recepcionadas',pendiente:'Pendientes',pagado:'Pagadas'})[e]).join(', ') : 'Todos los estados';
+  if (reporteTipo === 'ejecutivo') generarReportePDF(datos, periodoLabel, campoLabel, estadoLabel);
+  else exportarDashboard('viaticos', datos, periodoLabel, campoLabel, estadoLabel);
 }
 
-function generarReportePDF(datos, periodoLabel, campoLabel) {
+function generarReportePDF(datos, periodoLabel, campoLabel, estadoLabel) {
   const D = datos || DATA_VI;
   if (!D || D.length === 0) { showToast('⚠ Sin datos para generar reporte'); return; }
 
@@ -942,7 +983,7 @@ function generarReportePDF(datos, periodoLabel, campoLabel) {
   });
 
   const fmtCLP = v => v ? `$${Number(v).toLocaleString('es-CL')}` : '$0';
-  const estadoLabel = { recepcionado: 'Recepcionado', pendiente: 'Pendiente de pago', pagado: 'Pagado' };
+  const estadoMap = { recepcionado: 'Recepcionado', pendiente: 'Pendiente de pago', pagado: 'Pagado' };
   const estadoColor = { recepcionado: '#1565c0', pendiente: '#b45309', pagado: '#2e7d52' };
   const today = new Date().toLocaleDateString('es-CL', { day:'2-digit', month:'long', year:'numeric' });
 
@@ -977,7 +1018,7 @@ function generarReportePDF(datos, periodoLabel, campoLabel) {
   <div class="header">
     <div>
       <h1>Reporte de Viáticos por Ejecutivo${periodoLabel ? `<span style="font-size:13px;color:#8892b0"> ${periodoLabel}</span>` : ''}</h1>
-      <p>CDN Sercotec La Serena · Panel de Rendiciones${campoLabel ? ` · Filtrado por ${campoLabel}` : ''}</p>
+      <p>CDN Sercotec La Serena · Panel de Rendiciones${campoLabel ? ` · Filtrado por ${campoLabel}` : ''}${estadoLabel && estadoLabel !== 'Todos los estados' ? ` · Estado: ${estadoLabel}` : ''}</p>
     </div>
     <div class="fecha">Generado el ${today}</div>
   </div>`;
@@ -1019,7 +1060,7 @@ function generarReportePDF(datos, periodoLabel, campoLabel) {
         <td>${r.fechaAct || '—'}</td>
         <td>${r.fechaCreate || '—'}</td>
         <td style="font-weight:600">${fmtCLP(r.amount)}</td>
-        <td><span class="badge" style="background:${color}">${estadoLabel[r.status] || r.status}</span></td>
+        <td><span class="badge" style="background:${color}">${estadoMap[r.status] || r.status}</span></td>
       </tr>`;
     });
 
@@ -1044,7 +1085,7 @@ function generarReportePDF(datos, periodoLabel, campoLabel) {
       <div><div style="font-size:9px;color:#8892b0;text-transform:uppercase;letter-spacing:0.5px">Pagadas</div><strong style="font-size:15px;color:#2e7d52">${fmtCLP(montoGPagado)}</strong></div>
     </div>
   </div>
-  <div class="footer">CDN Sercotec La Serena · Reporte generado automáticamente desde el Panel de Rendiciones</div>
+  <div class="footer">CDN Sercotec La Serena - Sistema de Rendiciones desarrollado por Edgar Salinas - Versión 3.5</div>
   </body></html>`;
 
   // Abrir en nueva ventana para imprimir/guardar como PDF
