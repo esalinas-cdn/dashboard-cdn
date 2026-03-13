@@ -776,8 +776,8 @@ function exportarDashboard(mod) {
   <div class="kpis">
     <div class="kpi"><label>Total rendiciones</label><div class="val">${total}</div><div class="sub">${recep.length + pend.length} sin pagar</div></div>
     <div class="kpi"><label>Monto total</label><div class="val">${fmtCLP(montoTotal)}</div></div>
-    <div class="kpi"><label>Recepcionadas</label><div class="val" style="color:#1565c0">${recep.length}</div><div class="sub">Pendientes de revisión</div></div>
-    <div class="kpi"><label>Pendientes de pago</label><div class="val" style="color:#b45309">${pend.length}</div><div class="sub">En área financiera</div></div>
+    <div class="kpi"><label>Recepcionadas</label><div class="val" style="color:#1565c0">${recep.length}</div><div class="sub">${recep.length ? fmtCLP(recep.reduce((a,r)=>a+(r.amount||0),0)) : 'Pendientes de revisión'}</div></div>
+    <div class="kpi"><label>Pendientes de pago</label><div class="val" style="color:#b45309">${pend.length}</div><div class="sub">${pend.length ? fmtCLP(pend.reduce((a,r)=>a+(r.amount||0),0)) : 'En área financiera'}</div></div>
     <div class="kpi"><label>Pagadas</label><div class="val" style="color:#2e7d52">${pagado.length}</div><div class="sub">${fmtCLP(montoPagado)}</div></div>
   </div>
 
