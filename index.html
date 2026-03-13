@@ -321,7 +321,7 @@ td { padding:11px 16px; font-size:12.5px; }
     </div>
     <button class="login-btn" onclick="doLogin()">Ingresar al sistema</button>
     <div class="login-error" id="loginError">Usuario o contraseña incorrectos</div>
-    <div class="login-hint">Sistema interno v3.1 · CDN Sercotec La Serena<br>Desarrollado por Edgar Salinas</div>
+    <div class="login-hint">Sistema desarrollado por Edgar Salinas<br>Versión 3.3</div>
   </div>
 </div>
 
@@ -359,6 +359,8 @@ td { padding:11px 16px; font-size:12.5px; }
       <div class="nav-section" style="margin-top:8px">Reportes</div>
       <div class="nav-item vi" onclick="generarReportePDF()"><span class="nav-icon">⊙</span><span>Por ejecutivo</span></div>
       <div class="nav-item vi" onclick="exportarDashboard('viaticos')"><span class="nav-icon">↗</span><span>General</span></div>
+      <div class="nav-section" style="margin-top:8px">Soporte</div>
+      <div class="nav-item vi" onclick="window.open('https://wa.me/56966599285?text=Hola%2C%20estoy%20utilizando%20el%20Sistema%20de%20Rendici%C3%B3n%20del%20CDN%20y%20necesito%20asistencia%20t%C3%A9cnica%20con%20una%20de%20las%20funciones.%20%C2%BFMe%20podr%C3%ADan%20ayudar%3F','_blank')" style="color:#25d366"><span class="nav-icon">💬</span><span>Contactar soporte</span></div>
     </div>
 
     <div class="sidebar-user">
@@ -1239,7 +1241,6 @@ function renderTable(mod) {
     </tr>`;
   }).join('');
   // Paginación info y botones
-  const totalFiltered = rows.length; // rows ya paginado arriba
   document.getElementById(`${p}_pagInfo`).textContent = `Mostrando ${Math.min(st.page * ROWS_PER_PAGE, totalFiltered)} de ${totalFiltered} rendiciones`;
 }
 
