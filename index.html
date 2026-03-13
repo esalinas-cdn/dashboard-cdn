@@ -358,6 +358,7 @@ td { padding:11px 16px; font-size:12.5px; }
       <div class="nav-item vi" id="navNew" onclick="openForm('viaticos')"><span class="nav-icon">＋</span><span>Nueva rendición</span></div>
       <div class="nav-section" style="margin-top:8px">Reportes</div>
       <div class="nav-item vi" onclick="generarReportePDF()"><span class="nav-icon">⊙</span><span>Por ejecutivo</span></div>
+      <div class="nav-item vi" onclick="exportarDashboard('viaticos')"><span class="nav-icon">↗</span><span>General</span></div>
     </div>
 
     <div class="sidebar-user">
@@ -390,8 +391,8 @@ td { padding:11px 16px; font-size:12.5px; }
 
       <div class="kpis">
         <div class="kpi"><div class="kpi-accent" style="background:var(--blue)"></div><div class="kpi-label">Total rendiciones</div><div class="kpi-value" id="vi_kpiTotal" style="color:var(--blue)">—</div><div class="kpi-change" id="vi_kpiSub">—</div></div>
-        <div class="kpi"><div class="kpi-accent" style="background:#1976d2"></div><div class="kpi-label">Recepcionadas</div><div class="kpi-value" id="vi_kpiRecep" style="color:#1976d2">—</div><div class="kpi-change">Esperando revisión</div></div>
-        <div class="kpi"><div class="kpi-accent" style="background:var(--yellow)"></div><div class="kpi-label">Pendientes de pago</div><div class="kpi-value" id="vi_kpiPend" style="color:var(--yellow)">—</div><div class="kpi-change">En área financiera</div></div>
+        <div class="kpi"><div class="kpi-accent" style="background:#1976d2"></div><div class="kpi-label">Recepcionadas</div><div class="kpi-value" id="vi_kpiRecep" style="color:#1976d2">—</div><div class="kpi-change" id="vi_kpiRecepSub">Esperando revisión</div></div>
+        <div class="kpi"><div class="kpi-accent" style="background:var(--yellow)"></div><div class="kpi-label">Pendientes de pago</div><div class="kpi-value" id="vi_kpiPend" style="color:var(--yellow)">—</div><div class="kpi-change" id="vi_kpiPendSub">En área financiera</div></div>
         <div class="kpi"><div class="kpi-accent" style="background:var(--green)"></div><div class="kpi-label">Pagadas</div><div class="kpi-value" id="vi_kpiPaid" style="color:var(--green)">—</div><div class="kpi-change" id="vi_kpiPaidSub">—</div></div>
       </div>
 
@@ -426,6 +427,21 @@ td { padding:11px 16px; font-size:12.5px; }
               <div class="chip" onclick="filterBy('viaticos','pagado',this)">Pagados</div>
             </div>
           </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <div style="display:flex;gap:6px;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:4px 10px;">
+              <span style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;white-space:nowrap">Act.</span>
+              <input type="date" id="vi_fechaActDesde" onchange="filterFechas('viaticos')" style="border:none;background:transparent;font-size:11px;color:var(--text);font-family:'DM Mono',monospace;outline:none;">
+              <span style="font-size:10px;color:var(--muted)">→</span>
+              <input type="date" id="vi_fechaActHasta" onchange="filterFechas('viaticos')" style="border:none;background:transparent;font-size:11px;color:var(--text);font-family:'DM Mono',monospace;outline:none;">
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:4px 10px;">
+              <span style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;white-space:nowrap">Cre.</span>
+              <input type="date" id="vi_fechaCreDesde" onchange="filterFechas('viaticos')" style="border:none;background:transparent;font-size:11px;color:var(--text);font-family:'DM Mono',monospace;outline:none;">
+              <span style="font-size:10px;color:var(--muted)">→</span>
+              <input type="date" id="vi_fechaCreHasta" onchange="filterFechas('viaticos')" style="border:none;background:transparent;font-size:11px;color:var(--text);font-family:'DM Mono',monospace;outline:none;">
+            </div>
+            <button onclick="limpiarFechas('viaticos')" style="font-size:10px;font-family:'DM Mono',monospace;background:none;border:1px solid var(--border);border-radius:6px;padding:4px 8px;color:var(--muted);cursor:pointer;" title="Limpiar filtros de fecha">✕</button>
+          </div>
           <div class="search-box"><span style="color:var(--muted);font-size:13px">⌕</span><input type="text" placeholder="Buscar nombre, folio, comuna…" oninput="searchTable('viaticos',this.value)"></div>
         </div>
         <table>
@@ -459,8 +475,8 @@ td { padding:11px 16px; font-size:12.5px; }
 
       <div class="kpis">
         <div class="kpi"><div class="kpi-accent" style="background:var(--red)"></div><div class="kpi-label">Total rendiciones</div><div class="kpi-value" id="lo_kpiTotal" style="color:var(--red)">—</div><div class="kpi-change" id="lo_kpiSub">—</div></div>
-        <div class="kpi"><div class="kpi-accent" style="background:var(--red-mid)"></div><div class="kpi-label">Recepcionadas</div><div class="kpi-value" id="lo_kpiRecep" style="color:var(--red-mid)">—</div><div class="kpi-change">Esperando revisión</div></div>
-        <div class="kpi"><div class="kpi-accent" style="background:var(--yellow)"></div><div class="kpi-label">Pendientes de pago</div><div class="kpi-value" id="lo_kpiPend" style="color:var(--yellow)">—</div><div class="kpi-change">En área financiera</div></div>
+        <div class="kpi"><div class="kpi-accent" style="background:var(--red-mid)"></div><div class="kpi-label">Recepcionadas</div><div class="kpi-value" id="lo_kpiRecep" style="color:var(--red-mid)">—</div><div class="kpi-change" id="lo_kpiRecepSub">Esperando revisión</div></div>
+        <div class="kpi"><div class="kpi-accent" style="background:var(--yellow)"></div><div class="kpi-label">Pendientes de pago</div><div class="kpi-value" id="lo_kpiPend" style="color:var(--yellow)">—</div><div class="kpi-change" id="lo_kpiPendSub">En área financiera</div></div>
         <div class="kpi"><div class="kpi-accent" style="background:var(--green)"></div><div class="kpi-label">Pagadas</div><div class="kpi-value" id="lo_kpiPaid" style="color:var(--green)">—</div><div class="kpi-change" id="lo_kpiPaidSub">—</div></div>
       </div>
 
@@ -605,8 +621,8 @@ let DATA_LO = [
 let currentUser = null;
 let activeModule = 'viaticos';
 const state = {
-  viaticos:   { filter:'todos', search:'' },
-  locomocion: { filter:'todos', search:'' },
+  viaticos:   { filter:'todos', search:'', fechaActDesde:'', fechaActHasta:'', fechaCreDesde:'', fechaCreHasta:'' },
+  locomocion: { filter:'todos', search:'', fechaActDesde:'', fechaActHasta:'', fechaCreDesde:'', fechaCreHasta:'' },
 };
 let modalFolio = null;
 let modalModule = null;
@@ -1022,16 +1038,22 @@ function id(mod, key) { return document.getElementById(`${mod==='viaticos'?'vi':
 function renderKPIs(mod) {
   const D = getData(mod);
   const p = mod === 'viaticos' ? 'vi' : 'lo';
-  const total = D.length;
-  const recep = D.filter(r=>r.status==='recepcionado').length;
-  const pend  = D.filter(r=>r.status==='pendiente').length;
-  const paid  = D.filter(r=>r.status==='pagado').length;
-  document.getElementById(`${p}_kpiTotal`).textContent = total;
-  document.getElementById(`${p}_kpiSub`).textContent   = `${recep+pend} sin pagar`;
-  document.getElementById(`${p}_kpiRecep`).textContent = recep;
-  document.getElementById(`${p}_kpiPend`).textContent  = pend;
-  document.getElementById(`${p}_kpiPaid`).textContent  = paid;
-  document.getElementById(`${p}_kpiPaidSub`).textContent = total ? `${Math.round(paid/total*100)}% del total` : '—';
+  const total      = D.length;
+  const recepRows  = D.filter(r=>r.status==='recepcionado');
+  const pendRows   = D.filter(r=>r.status==='pendiente');
+  const paidRows   = D.filter(r=>r.status==='pagado');
+  const recep = recepRows.length, pend = pendRows.length, paid = paidRows.length;
+  const montoRecep = recepRows.reduce((a,r)=>a+(r.amount||0),0);
+  const montoPend  = pendRows.reduce((a,r)=>a+(r.amount||0),0);
+  const montoPaid  = paidRows.reduce((a,r)=>a+(r.amount||0),0);
+  document.getElementById(`${p}_kpiTotal`).textContent    = total;
+  document.getElementById(`${p}_kpiSub`).textContent      = `${recep+pend} sin pagar`;
+  document.getElementById(`${p}_kpiRecep`).textContent    = recep;
+  document.getElementById(`${p}_kpiRecepSub`).textContent = recep ? fmt(montoRecep) : 'Esperando revisión';
+  document.getElementById(`${p}_kpiPend`).textContent     = pend;
+  document.getElementById(`${p}_kpiPendSub`).textContent  = pend ? fmt(montoPend) : 'En área financiera';
+  document.getElementById(`${p}_kpiPaid`).textContent     = paid;
+  document.getElementById(`${p}_kpiPaidSub`).textContent  = paid ? fmt(montoPaid) : '—';
 }
 
 // ══ BAR CHART ═════════════════════════════════════════════════════════════════
@@ -1118,6 +1140,16 @@ function statusBadge(s) {
   return `<span class="badge ${m.cls}"><span class="badge-dot"></span>${m.label}</span>`;
 }
 
+function parseDate(str) {
+  if (!str) return null;
+  // Soporta DD-MM-YYYY y YYYY-MM-DD
+  let m = str.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  if (m) return new Date(`${m[3]}-${m[2]}-${m[1]}`);
+  m = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return new Date(str);
+  return null;
+}
+
 function renderTable(mod) {
   const D = getData(mod);
   const p = mod === 'viaticos' ? 'vi' : 'lo';
@@ -1130,6 +1162,24 @@ function renderTable(mod) {
       (r.folio && r.folio.toLowerCase().includes(q)) ||
       (r.comuna && r.comuna.toLowerCase().includes(q))
     );
+  }
+  // Filtros de fecha actividad
+  if (st.fechaActDesde) {
+    const desde = parseDate(st.fechaActDesde);
+    if (desde) rows = rows.filter(r => { const d = parseDate(r.fechaAct); return d && d >= desde; });
+  }
+  if (st.fechaActHasta) {
+    const hasta = parseDate(st.fechaActHasta);
+    if (hasta) rows = rows.filter(r => { const d = parseDate(r.fechaAct); return d && d <= hasta; });
+  }
+  // Filtros de fecha creación
+  if (st.fechaCreDesde) {
+    const desde = parseDate(st.fechaCreDesde);
+    if (desde) rows = rows.filter(r => { const d = parseDate(r.fechaCreate); return d && d >= desde; });
+  }
+  if (st.fechaCreHasta) {
+    const hasta = parseDate(st.fechaCreHasta);
+    if (hasta) rows = rows.filter(r => { const d = parseDate(r.fechaCreate); return d && d <= hasta; });
   }
 
   const body = document.getElementById(`${p}_tableBody`);
@@ -1170,6 +1220,25 @@ function filterBy(mod, f, el) {
 }
 
 function searchTable(mod, v) { state[mod].search = v; renderTable(mod); }
+
+function filterFechas(mod) {
+  const p = mod === 'viaticos' ? 'vi' : 'lo';
+  state[mod].fechaActDesde = document.getElementById(`${p}_fechaActDesde`)?.value || '';
+  state[mod].fechaActHasta = document.getElementById(`${p}_fechaActHasta`)?.value || '';
+  state[mod].fechaCreDesde = document.getElementById(`${p}_fechaCreDesde`)?.value || '';
+  state[mod].fechaCreHasta = document.getElementById(`${p}_fechaCreHasta`)?.value || '';
+  renderTable(mod);
+}
+
+function limpiarFechas(mod) {
+  const p = mod === 'viaticos' ? 'vi' : 'lo';
+  ['fechaActDesde','fechaActHasta','fechaCreDesde','fechaCreHasta'].forEach(id => {
+    const el = document.getElementById(`${p}_${id}`);
+    if (el) el.value = '';
+    state[mod][id] = '';
+  });
+  renderTable(mod);
+}
 
 // ══ MODAL ═════════════════════════════════════════════════════════════════════
 function openModal(rowIndex, mod) {
