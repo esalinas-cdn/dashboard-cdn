@@ -357,8 +357,8 @@ td { padding:11px 16px; font-size:12.5px; }
       <div class="nav-item active vi" id="navDash"><span class="nav-icon">◈</span><span>Dashboard</span></div>
       <div class="nav-item vi" id="navNew" onclick="openForm('viaticos')"><span class="nav-icon">＋</span><span>Nueva rendición</span></div>
       <div class="nav-section" style="margin-top:8px">Reportes</div>
-      <div class="nav-item vi" onclick="generarReportePDF()"><span class="nav-icon">⊙</span><span>Por ejecutivo</span></div>
-      <div class="nav-item vi" onclick="exportarDashboard('viaticos')"><span class="nav-icon">↗</span><span>General</span></div>
+      <div class="nav-item vi" onclick="abrirReporteModal('ejecutivo')"><span class="nav-icon">⊙</span><span>Por ejecutivo</span></div>
+      <div class="nav-item vi" onclick="abrirReporteModal('general')"><span class="nav-icon">↗</span><span>General</span></div>
       <div class="nav-section" style="margin-top:8px">Soporte</div>
       <div class="nav-item vi" onclick="window.open('https://wa.me/56966599285?text=Hola%2C%20estoy%20utilizando%20el%20Sistema%20de%20Rendici%C3%B3n%20del%20CDN%20y%20necesito%20asistencia%20t%C3%A9cnica%20con%20una%20de%20las%20funciones.%20%C2%BFMe%20podr%C3%ADan%20ayudar%3F','_blank')" style="color:#25d366"><span class="nav-icon">💬</span><span>Contactar soporte</span></div>
     </div>
@@ -559,6 +559,41 @@ td { padding:11px 16px; font-size:12.5px; }
   </div>
 </div>
 
+<!-- REPORTE PERIODO MODAL -->
+<div class="modal-overlay" id="reporteModal">
+  <div class="modal" style="width:380px">
+    <div class="modal-title" id="reporteModalTitle">Generar Reporte</div>
+    <div class="modal-sub">Selecciona el período a incluir. Si no seleccionas fechas, se incluirán todos los registros.</div>
+    <div style="margin-bottom:14px;">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:0.5px">Filtrar por</div>
+      <div style="display:flex;gap:16px;margin-bottom:14px;">
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
+          <input type="radio" name="reporteFecha" value="fechaAct" id="rFechaAct" checked style="accent-color:var(--blue)"> Fecha actividad
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
+          <input type="radio" name="reporteFecha" value="fechaCre" id="rFechaCre" style="accent-color:var(--blue)"> Fecha creación
+        </label>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <div style="flex:1">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Desde</div>
+          <input type="date" id="reporteDesde" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:'DM Mono',monospace;color:var(--text);background:var(--surface2);outline:none;">
+        </div>
+        <div style="color:var(--muted);margin-top:16px">→</div>
+        <div style="flex:1">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Hasta</div>
+          <input type="date" id="reporteHasta" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:'DM Mono',monospace;color:var(--text);background:var(--surface2);outline:none;">
+        </div>
+      </div>
+      <div style="margin-top:8px;font-size:10px;color:var(--muted);font-family:'DM Mono',monospace" id="reporteConteo">— registros en el período seleccionado</div>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn modal-cancel" onclick="closeReporteModal()">Cancelar</button>
+      <button class="modal-btn modal-save" id="reporteGenBtn" onclick="ejecutarReporte()">Generar PDF</button>
+    </div>
+  </div>
+</div>
+
 <!-- PDF MODAL -->
 <div id="pdfModal">
   <div class="pdf-modal-box">
@@ -699,8 +734,8 @@ function updatePills() {
   document.getElementById('pillLocomocion').textContent = loPending;
 }
 
-function exportarDashboard(mod) {
-  const D = getData(mod);
+function exportarDashboard(mod, datosIn, periodoLabel, campoLabel) {
+  const D = datosIn || getData(mod);
   if (!D || D.length === 0) { showToast('⚠ Sin datos para exportar'); return; }
 
   const fmtCLP  = v => v ? `$${Number(v).toLocaleString('es-CL')}` : '$0';
@@ -709,6 +744,8 @@ function exportarDashboard(mod) {
   const modLabel    = mod === 'viaticos' ? 'Viáticos' : 'Locomoción';
   const accentColor = mod === 'viaticos' ? '#1565c0' : '#d32f2f';
   const today = new Date().toLocaleDateString('es-CL', { day:'2-digit', month:'long', year:'numeric' });
+  const periodoStr = periodoLabel ? `<span style="font-size:11px;color:#8892b0"> ${periodoLabel}</span>` : '';
+  const campoStr   = campoLabel   ? ` · Filtrado por ${campoLabel}` : '';
 
   // KPIs
   const total  = D.length;
@@ -771,8 +808,8 @@ function exportarDashboard(mod) {
   </div>
   <div class="header">
     <div>
-      <h1>Dashboard de ${modLabel}</h1>
-      <p>CDN Sercotec La Serena · Panel de Rendiciones</p>
+      <h1>Dashboard de ${modLabel}${periodoStr}</h1>
+      <p>CDN Sercotec La Serena · Panel de Rendiciones${campoStr}</p>
     </div>
     <div class="fecha">Generado el ${today}</div>
   </div>
@@ -828,8 +865,73 @@ function exportarDashboard(mod) {
   showToast('✓ Dashboard exportado — usa Ctrl+P para guardar como PDF');
 }
 
-function generarReportePDF() {
-  const D = DATA_VI;
+let reporteTipo = null; // 'ejecutivo' | 'general'
+
+function abrirReporteModal(tipo) {
+  reporteTipo = tipo;
+  document.getElementById('reporteModalTitle').textContent =
+    tipo === 'ejecutivo' ? 'Reporte por Ejecutivo · Período' : 'Reporte General · Período';
+  document.getElementById('reporteDesde').value = '';
+  document.getElementById('reporteHasta').value = '';
+  document.getElementById('rFechaAct').checked = true;
+  actualizarConteoReporte();
+  document.getElementById('reporteModal').classList.add('open');
+  document.getElementById('reporteDesde').addEventListener('change', actualizarConteoReporte);
+  document.getElementById('reporteHasta').addEventListener('change', actualizarConteoReporte);
+  document.querySelectorAll('input[name="reporteFecha"]').forEach(r =>
+    r.addEventListener('change', actualizarConteoReporte));
+}
+
+function actualizarConteoReporte() {
+  const desde  = document.getElementById('reporteDesde').value;
+  const hasta  = document.getElementById('reporteHasta').value;
+  const campo  = document.querySelector('input[name="reporteFecha"]:checked')?.value || 'fechaAct';
+  const datos  = filtrarDatosReporte(DATA_VI, desde, hasta, campo);
+  const el     = document.getElementById('reporteConteo');
+  if (!desde && !hasta) {
+    el.textContent = `${DATA_VI.length} registros en total (sin filtro de período)`;
+  } else {
+    el.textContent = `${datos.length} registros en el período seleccionado`;
+  }
+}
+
+function filtrarDatosReporte(D, desde, hasta, campo) {
+  let rows = [...D];
+  const getF = r => campo === 'fechaAct' ? r.fechaAct : r.fechaCreate;
+  if (desde) {
+    const d = new Date(desde);
+    rows = rows.filter(r => { const f = parseDate(getF(r)); return f && f >= d; });
+  }
+  if (hasta) {
+    const h = new Date(hasta);
+    h.setHours(23,59,59);
+    rows = rows.filter(r => { const f = parseDate(getF(r)); return f && f <= h; });
+  }
+  return rows;
+}
+
+function closeReporteModal() {
+  document.getElementById('reporteModal').classList.remove('open');
+  reporteTipo = null;
+}
+
+function ejecutarReporte() {
+  const desde = document.getElementById('reporteDesde').value;
+  const hasta = document.getElementById('reporteHasta').value;
+  const campo = document.querySelector('input[name="reporteFecha"]:checked')?.value || 'fechaAct';
+  const datos = filtrarDatosReporte(DATA_VI, desde, hasta, campo);
+  if (datos.length === 0) { showToast('⚠ Sin registros en el período seleccionado'); return; }
+  closeReporteModal();
+  const periodoLabel = desde || hasta
+    ? ` · ${desde ? desde.split('-').reverse().join('/') : '…'} → ${hasta ? hasta.split('-').reverse().join('/') : '…'}`
+    : ' · Todos los registros';
+  const campoLabel = campo === 'fechaAct' ? 'Fecha actividad' : 'Fecha creación';
+  if (reporteTipo === 'ejecutivo') generarReportePDF(datos, periodoLabel, campoLabel);
+  else exportarDashboard('viaticos', datos, periodoLabel, campoLabel);
+}
+
+function generarReportePDF(datos, periodoLabel, campoLabel) {
+  const D = datos || DATA_VI;
   if (!D || D.length === 0) { showToast('⚠ Sin datos para generar reporte'); return; }
 
   // Agrupar por ejecutivo
@@ -874,8 +976,8 @@ function generarReportePDF() {
   </div>
   <div class="header">
     <div>
-      <h1>Reporte de Viáticos por Ejecutivo</h1>
-      <p>CDN Sercotec La Serena · Panel de Rendiciones</p>
+      <h1>Reporte de Viáticos por Ejecutivo${periodoLabel ? `<span style="font-size:13px;color:#8892b0"> ${periodoLabel}</span>` : ''}</h1>
+      <p>CDN Sercotec La Serena · Panel de Rendiciones${campoLabel ? ` · Filtrado por ${campoLabel}` : ''}</p>
     </div>
     <div class="fecha">Generado el ${today}</div>
   </div>`;
@@ -1416,6 +1518,7 @@ function showToast(msg) {
 // Close modals on overlay
 document.getElementById('statusModal').addEventListener('click', function(e){ if(e.target===this) closeModal(); });
 document.getElementById('pdfModal').addEventListener('click', function(e){ if(e.target===this) closePDF(); });
+document.getElementById('reporteModal').addEventListener('click', function(e){ if(e.target===this) closeReporteModal(); });
 </script>
 </body>
 </html>
