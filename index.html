@@ -234,6 +234,7 @@ td { padding:11px 16px; font-size:12.5px; }
 .action-btn { width:26px; height:26px; border-radius:6px; background:var(--surface2); border:1.5px solid var(--border); color:var(--muted); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:11px; transition:all 0.15s; }
 .action-btn:hover { border-color:var(--blue-mid); color:var(--blue); background:var(--blue-light); }
 .action-btn.green:hover { border-color:var(--green); color:var(--green); background:var(--green-light); }
+.action-btn.red:hover { border-color:var(--red); color:var(--red); background:var(--red-light); }
 .action-btn.disabled { opacity:0.3; cursor:default; pointer-events:none; }
 .pagination { padding:11px 20px; display:flex; align-items:center; justify-content:space-between; border-top:1.5px solid var(--border); }
 .pag-info { font-size:11px; color:var(--muted); font-family:'DM Mono',monospace; }
@@ -391,7 +392,7 @@ td { padding:11px 16px; font-size:12.5px; }
     </div>
     <button class="login-btn" onclick="doLogin()">Ingresar al sistema</button>
     <div class="login-error" id="loginError">Usuario o contraseña incorrectos</div>
-    <div class="login-hint">Sistema desarrollado por Edgar Salinas<br>Versión 4.7</div>
+    <div class="login-hint">Sistema desarrollado por Edgar Salinas<br>Versión 4.7.1</div>
   </div>
 </div>
 
@@ -951,7 +952,7 @@ function exportarDashboard(mod, datosIn, periodoLabel, campoLabel, estadoLabel) 
   });
 
   html += `</tbody></table>
-  <div class="footer">CDN Sercotec La Serena - Sistema de Rendiciones desarrollado por Edgar Salinas - Versión 4.7</div>
+  <div class="footer">CDN Sercotec La Serena - Sistema de Rendiciones desarrollado por Edgar Salinas - Versión 4.7.1</div>
   </body></html>`;
 
   const win = window.open('', '_blank');
@@ -1171,7 +1172,7 @@ function generarReportePDF(datos, periodoLabel, campoLabel, estadoLabel, mod) {
       <div><div style="font-size:9px;color:#8892b0;text-transform:uppercase;letter-spacing:0.5px">Pagadas</div><strong style="font-size:15px;color:#2e7d52">${fmtCLP(montoGPagado)}</strong></div>
     </div>
   </div>
-  <div class="footer">CDN Sercotec La Serena - Sistema de Rendiciones desarrollado por Edgar Salinas - Versión 4.7</div>
+  <div class="footer">CDN Sercotec La Serena - Sistema de Rendiciones desarrollado por Edgar Salinas - Versión 4.7.1</div>
   </body></html>`;
 
   // Abrir en nueva ventana para imprimir/guardar como PDF
@@ -1535,6 +1536,8 @@ function renderTable(mod) {
       ? `<div class="action-btn" title="Cambiar estado" onclick="openModal(${r.rowIndex},'${mod}')">✎</div>` : '';
     const payBtn = currentUser?.canEdit && r.status !== 'pagado'
       ? `<div class="action-btn green" title="Marcar pagado" onclick="quickPay(${r.rowIndex},'${mod}')">✓</div>` : '';
+    const delBtn = currentUser?.canEdit
+      ? `<div class="action-btn red" title="Eliminar registro" onclick="deleteRow(${r.rowIndex},'${mod}')">✕</div>` : '';
     const comunaCell = isVi ? `<td style="color:var(--text2)">${r.comuna}</td>` : '';
     return `<tr>
       <td>${folioCell}</td>
@@ -1544,7 +1547,7 @@ function renderTable(mod) {
       <td><span class="date-cell">${r.fechaCreateDisplay || r.fechaCreate}</span></td>
       <td><span class="amount-cell">${fmt(r.amount)}</span></td>
       <td>${statusBadge(r.status)}</td>
-      <td><div style="display:flex;gap:4px;justify-content:center">${pdfBtn}${editBtn}${payBtn}</div></td>
+      <td><div style="display:flex;gap:4px;justify-content:center">${pdfBtn}${editBtn}${payBtn}${delBtn}</div></td>
     </tr>`;
   }).join('');
   // Paginación info y botones
@@ -1657,7 +1660,27 @@ function quickPay(rowIndex, mod) {
   }
 }
 
-// ══ FOLIO EDIT ════════════════════════════════════════════════════════════════
+// ══ DELETE ROW ════════════════════════════════════════════════════════════════
+function deleteRow(rowIndex, mod) {
+  if (!currentUser?.canEdit) return;
+  const D = getData(mod);
+  const row = D.find(r => r.rowIndex === rowIndex);
+  if (!row) return;
+  const nombre = row.name || 'este registro';
+  const fecha  = row.fechaActDisplay || row.fechaAct || '';
+  if (!confirm(`¿Eliminar la rendición de ${nombre}${fecha ? ' del ' + fecha : ''}?\n\nEsta acción eliminará el registro del Sheet y no se puede deshacer.`)) return;
+
+  // Eliminar del array local inmediatamente
+  if (mod === 'viaticos') DATA_VI = DATA_VI.filter(r => r.rowIndex !== rowIndex);
+  else                    DATA_LO = DATA_LO.filter(r => r.rowIndex !== rowIndex);
+
+  // Llamar al Apps Script para eliminar del Sheet
+  const url = mod === 'viaticos' ? CONFIG.appsScriptViaticos : CONFIG.appsScriptLocomocion;
+  if (url) callSheet(url, { action:'deleteRow', rowIndex });
+
+  renderKPIs(mod); renderBarChart(mod); renderDonut(mod); renderTable(mod); updatePills();
+  showToast('✓ Registro eliminado');
+}
 function editFolio(span, rowIndex, mod) {
   if (!currentUser?.canEdit) return;
   const D = getData(mod);
