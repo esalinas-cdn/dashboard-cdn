@@ -391,7 +391,7 @@ td { padding:11px 16px; font-size:12.5px; }
     </div>
     <button class="login-btn" onclick="doLogin()">Ingresar al sistema</button>
     <div class="login-error" id="loginError">Usuario o contraseña incorrectos</div>
-    <div class="login-hint">Sistema desarrollado por Edgar Salinas<br>Versión 3.6</div>
+    <div class="login-hint">Sistema desarrollado por Edgar Salinas<br>Versión 3.8</div>
   </div>
 </div>
 
@@ -712,8 +712,10 @@ const CONFIG = {
   empresa: 'CDN Sercotec La Serena',
   formURLViaticos:      'https://forms.gle/qbJWjSF4mLXyRcHT8',
   formURLLocomocion:    'https://forms.google.com',  // ← pega URL Google Form Locomoción
-  appsScriptViaticos:   'https://script.google.com/macros/s/AKfycbxihKcFeXfG7OHNphPrwzUVDl8dwcuPQh0gnHMtd94hvdLGPeU4Zia9eDk7_prW7b2R/exec',
+  appsScriptViaticos:   'https://script.google.com/macros/s/AKfycbze_2Mm2KfZWYqHZDS_nu43gc7I3pHvK0ndK3HtrLRGplXiR0nt8eT5BUOJJdMaAKOFLA/exec',
   appsScriptLocomocion: '',  // ← se conectará después
+  sheetsIdViaticos:     '1rgChKjZRIrv2ZNqCU1BD2FibyUl2ABN7cA8RHfmGwfk',
+  sheetsTab:            'Respuestas de formulario 1',
 };
 
 // ══ USUARIOS ═════════════════════════════════════════════════════════════════
@@ -951,7 +953,7 @@ function exportarDashboard(mod, datosIn, periodoLabel, campoLabel, estadoLabel) 
   });
 
   html += `</tbody></table>
-  <div class="footer">CDN Sercotec La Serena - Sistema de Rendiciones desarrollado por Edgar Salinas - Versión 3.6</div>
+  <div class="footer">CDN Sercotec La Serena - Sistema de Rendiciones desarrollado por Edgar Salinas - Versión 3.8</div>
   </body></html>`;
 
   const win = window.open('', '_blank');
@@ -1162,7 +1164,7 @@ function generarReportePDF(datos, periodoLabel, campoLabel, estadoLabel) {
       <div><div style="font-size:9px;color:#8892b0;text-transform:uppercase;letter-spacing:0.5px">Pagadas</div><strong style="font-size:15px;color:#2e7d52">${fmtCLP(montoGPagado)}</strong></div>
     </div>
   </div>
-  <div class="footer">CDN Sercotec La Serena - Sistema de Rendiciones desarrollado por Edgar Salinas - Versión 3.6</div>
+  <div class="footer">CDN Sercotec La Serena - Sistema de Rendiciones desarrollado por Edgar Salinas - Versión 3.8</div>
   </body></html>`;
 
   // Abrir en nueva ventana para imprimir/guardar como PDF
@@ -1193,76 +1195,110 @@ function renderAll(mod) {
 }
 
 function loadFromSheet(mod) {
-  const url = mod === 'viaticos' ? CONFIG.appsScriptViaticos : CONFIG.appsScriptLocomocion;
-  const p   = mod === 'viaticos' ? 'vi' : 'lo';
-  if (!url) return;
-
+  const p    = mod === 'viaticos' ? 'vi' : 'lo';
+  const sheetId = mod === 'viaticos' ? CONFIG.sheetsIdViaticos : '';
   const cols = mod === 'viaticos' ? 8 : 7;
+
   document.getElementById(`${p}_tableBody`).innerHTML =
     `<tr><td colspan="${cols}" style="text-align:center;padding:28px;color:var(--muted);font-family:'DM Mono',monospace;font-size:12px;">⟳ Cargando datos desde Google Sheets…</td></tr>`;
 
-  const cbName = '_gs_' + mod + '_' + Date.now();
+  if (!sheetId) { renderKPIs(mod); renderBarChart(mod); renderDonut(mod); renderTable(mod); updatePills(); return; }
 
-  const done = (res) => {
-    if (!res || !res.ok) {
+  // Leer via CSV público — funciona en móvil y PC sin autenticación
+  const tabName = encodeURIComponent(CONFIG.sheetsTab);
+  const csvUrl  = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${tabName}`;
+
+  fetch(csvUrl)
+    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+    .then(csv => {
+      const data = parseSheetCSV(csv, mod);
+      if (mod === 'viaticos') DATA_VI = data;
+      else                    DATA_LO = data;
+      renderKPIs(mod); renderBarChart(mod); renderDonut(mod); renderTable(mod); updatePills();
+      document.getElementById('updateTime').textContent =
+        'Actualizado desde Google Sheets · ' + new Date().toLocaleTimeString('es-CL');
+      showToast('✓ ' + data.length + ' registros cargados');
+    })
+    .catch(err => {
       document.getElementById(`${p}_tableBody`).innerHTML =
-        `<tr><td colspan="${cols}" style="text-align:center;padding:24px;color:var(--red);font-family:'DM Mono',monospace;font-size:12px;">⚠ Error al leer datos: ${res ? res.error : 'sin respuesta'}</td></tr>`;
-      showToast('⚠ Error al leer el Sheet');
-      return;
+        `<tr><td colspan="${cols}" style="text-align:center;padding:24px;color:var(--red);font-family:'DM Mono',monospace;font-size:12px;">⚠ Error al leer datos. Verifica que la hoja sea pública.</td></tr>`;
+      showToast('⚠ Error al leer el Sheet: ' + err.message);
+    });
+}
+
+function parseSheetCSV(csv, mod) {
+  // Parser CSV robusto que maneja comas dentro de comillas
+  function parseRow(line) {
+    const result = []; let cur = ''; let inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') { if (inQ && line[i+1] === '"') { cur += '"'; i++; } else inQ = !inQ; }
+      else if (ch === ',' && !inQ) { result.push(cur.trim()); cur = ''; }
+      else cur += ch;
     }
-    if (mod === 'viaticos') DATA_VI = res.data;
-    else                    DATA_LO = res.data;
-    renderKPIs(mod); renderBarChart(mod); renderDonut(mod); renderTable(mod); updatePills();
-    document.getElementById('updateTime').textContent =
-      'Actualizado desde Google Sheets · ' + new Date().toLocaleTimeString('es-CL');
-    showToast('✓ ' + res.data.length + ' registros cargados');
-  };
+    result.push(cur.trim());
+    return result;
+  }
 
-  // Crear tag <script> para JSONP — funciona con archivos locales y desde cualquier origen
-  window[cbName] = function(res) {
-    clearTimeout(timer);
-    const s = document.getElementById(cbName);
-    if (s) s.remove();
-    delete window[cbName];
-    done(res);
-  };
+  const lines = csv.split('\n').filter(l => l.trim());
+  if (lines.length < 2) return [];
 
-  const timer = setTimeout(() => {
-    const s = document.getElementById(cbName);
-    if (s) s.remove();
-    delete window[cbName];
-    document.getElementById(`${p}_tableBody`).innerHTML =
-      `<tr><td colspan="${cols}" style="text-align:center;padding:24px;color:var(--red);font-family:'DM Mono',monospace;font-size:12px;">
-        ⚠ Sin respuesta del servidor.<br>
-        <span style="font-size:10px;margin-top:4px;display:block">Verifica que la Web App esté publicada como "Cualquier persona"</span>
-      </td></tr>`;
-    showToast('⚠ Tiempo de espera agotado');
-  }, 15000);
+  const COL_ESTADO  = 44; // AO índice 0-based
+  const COL_FOLIO   = 45; // AP
+  const COL_URL_PDF = 46; // AQ
 
-  const s = document.createElement('script');
-  s.id  = cbName;
-  s.src = `${url}?action=getData&callback=${cbName}`;
-  document.body.appendChild(s);
+  function fmtDate(val) {
+    if (!val) return '';
+    // Formato: "M/D/YYYY HH:MM:SS" o "DD-MM-YYYY"
+    const m1 = val.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (m1) return `${m1[2].padStart(2,'0')}-${m1[1].padStart(2,'0')}-${m1[3]}`;
+    const m2 = val.match(/^(\d{1,2})-(\d{1,2})-(\d{4})/);
+    if (m2) return val;
+    return val;
+  }
+
+  return lines.slice(1).map((line, i) => {
+    const row = parseRow(line);
+    const montoRaw = row[36] || row[9] || '0';
+    const monto = Number(String(montoRaw).replace(/[^0-9]/g, '')) || 0;
+    const status = (row[COL_ESTADO] && row[COL_ESTADO] !== '')
+      ? row[COL_ESTADO] : 'recepcionado';
+    return {
+      rowIndex:    i + 2,
+      folio:       row[COL_FOLIO]   || '',
+      name:        row[2]           || '',
+      comuna:      row[5]           || '',
+      fechaAct:    fmtDate(row[4])  || '',
+      fechaCreate: fmtDate(row[0])  || '',
+      amount:      monto,
+      status:      status,
+      driveURL:    row[COL_URL_PDF] || '',
+    };
+  }).filter(r => r.name !== '');
 }
 
 function callSheet(url, params) {
   if (!url) return;
-  const cbName = '_upd_' + Date.now();
   const qs = Object.entries(params).map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-  window[cbName] = function() {
-    const s = document.getElementById(cbName);
-    if (s) s.remove();
-    delete window[cbName];
-  };
-  setTimeout(() => {
-    const s = document.getElementById(cbName);
-    if (s) s.remove();
-    delete window[cbName];
-  }, 10000);
-  const s = document.createElement('script');
-  s.id  = cbName;
-  s.src = `${url}?${qs}&callback=${cbName}`;
-  document.body.appendChild(s);
+  // Intentar fetch primero, fallback a JSONP
+  fetch(`${url}?${qs}`, { redirect: 'follow' })
+    .catch(() => {
+      const cbName = '_upd_' + Date.now();
+      window[cbName] = function() {
+        const s = document.getElementById(cbName);
+        if (s) s.remove();
+        delete window[cbName];
+      };
+      setTimeout(() => {
+        const s = document.getElementById(cbName);
+        if (s) s.remove();
+        delete window[cbName];
+      }, 10000);
+      const s = document.createElement('script');
+      s.id  = cbName;
+      s.src = `${url}?${qs}&callback=${cbName}`;
+      document.body.appendChild(s);
+    });
 }
 
 function getData(mod) { return mod === 'viaticos' ? DATA_VI : DATA_LO; }
