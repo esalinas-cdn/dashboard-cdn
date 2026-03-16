@@ -391,7 +391,7 @@ td { padding:11px 16px; font-size:12.5px; }
     </div>
     <button class="login-btn" onclick="doLogin()">Ingresar al sistema</button>
     <div class="login-error" id="loginError">Usuario o contraseña incorrectos</div>
-    <div class="login-hint">Sistema desarrollado por Edgar Salinas<br>Versión 4.6</div>
+    <div class="login-hint">Sistema desarrollado por Edgar Salinas<br>Versión 4.7</div>
   </div>
 </div>
 
@@ -951,7 +951,7 @@ function exportarDashboard(mod, datosIn, periodoLabel, campoLabel, estadoLabel) 
   });
 
   html += `</tbody></table>
-  <div class="footer">CDN Sercotec La Serena - Sistema de Rendiciones desarrollado por Edgar Salinas - Versión 4.6</div>
+  <div class="footer">CDN Sercotec La Serena - Sistema de Rendiciones desarrollado por Edgar Salinas - Versión 4.7</div>
   </body></html>`;
 
   const win = window.open('', '_blank');
@@ -1084,14 +1084,14 @@ function generarReportePDF(datos, periodoLabel, campoLabel, estadoLabel, mod) {
     .header p { font-size: 11px; color: #8892b0; margin-top: 4px; }
     .header .fecha { font-size: 11px; color: #8892b0; text-align:right; }
     .ejecutivo { margin-bottom: 32px; page-break-inside: avoid; }
-    .ejecutivo-header { background: #f0f2f8; border-left: 4px solid #1565c0; padding: 10px 14px; margin-bottom: 10px; border-radius: 0 6px 6px 0; }
+    .ejecutivo-header { background: #f0f2f8; border-left: 4px solid ${accentColor}; padding: 10px 14px; margin-bottom: 10px; border-radius: 0 6px 6px 0; }
     .ejecutivo-header h2 { font-size: 14px; color: #1a1f36; font-weight: 700; }
     .resumen { display: flex; gap: 12px; margin-bottom: 10px; }
     .kpi { background: #f8f9ff; border: 1px solid #dde1ee; border-radius: 6px; padding: 8px 14px; flex: 1; }
     .kpi label { font-size: 9px; color: #8892b0; text-transform: uppercase; letter-spacing: 0.5px; display:block; }
-    .kpi span { font-size: 15px; font-weight: 700; color: #1565c0; }
+    .kpi span { font-size: 15px; font-weight: 700; color: ${accentColor}; }
     table { width: 100%; border-collapse: collapse; font-size: 11px; }
-    th { background: #1565c0; color: white; padding: 7px 10px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px; }
+    th { background: ${accentColor}; color: white; padding: 7px 10px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px; }
     td { padding: 6px 10px; border-bottom: 1px solid #eef0f7; }
     tr:nth-child(even) td { background: #f8f9ff; }
     .badge { display:inline-block; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 600; color: white; }
@@ -1099,7 +1099,7 @@ function generarReportePDF(datos, periodoLabel, campoLabel, estadoLabel, mod) {
     @media print { body { padding: 16px; } .no-print { display:none; } }
   </style></head><body>
   <div class="no-print" style="text-align:center;margin-bottom:20px;">
-    <button onclick="window.print()" style="background:#1565c0;color:white;border:none;padding:10px 28px;border-radius:6px;font-size:13px;cursor:pointer;font-weight:600;">⬇ Descargar / Imprimir PDF</button>
+    <button onclick="window.print()" style="background:${accentColor};color:white;border:none;padding:10px 28px;border-radius:6px;font-size:13px;cursor:pointer;font-weight:600;">⬇ Descargar / Imprimir PDF</button>
   </div>
   <div class="header">
     <div>
@@ -1171,7 +1171,7 @@ function generarReportePDF(datos, periodoLabel, campoLabel, estadoLabel, mod) {
       <div><div style="font-size:9px;color:#8892b0;text-transform:uppercase;letter-spacing:0.5px">Pagadas</div><strong style="font-size:15px;color:#2e7d52">${fmtCLP(montoGPagado)}</strong></div>
     </div>
   </div>
-  <div class="footer">CDN Sercotec La Serena - Sistema de Rendiciones desarrollado por Edgar Salinas - Versión 4.6</div>
+  <div class="footer">CDN Sercotec La Serena - Sistema de Rendiciones desarrollado por Edgar Salinas - Versión 4.7</div>
   </body></html>`;
 
   // Abrir en nueva ventana para imprimir/guardar como PDF
