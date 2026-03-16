@@ -391,7 +391,7 @@ td { padding:11px 16px; font-size:12.5px; }
     </div>
     <button class="login-btn" onclick="doLogin()">Ingresar al sistema</button>
     <div class="login-error" id="loginError">Usuario o contraseña incorrectos</div>
-    <div class="login-hint">Sistema desarrollado por Edgar Salinas<br>Versión 4.4</div>
+    <div class="login-hint">Sistema desarrollado por Edgar Salinas<br>Versión 4.5</div>
   </div>
 </div>
 
@@ -547,6 +547,7 @@ td { padding:11px 16px; font-size:12.5px; }
           <div class="module-strip-sub" style="color:var(--red-mid)">Control de gastos de transporte y movilización</div>
         </div>
         <div style="margin-left:auto;display:flex;gap:8px;">
+          <button class="btn btn-ghost" style="font-size:11.5px" onclick="loadFromSheet('locomocion')" title="Recargar datos desde Sheet">↺ Actualizar</button>
           <button class="btn btn-ghost" style="font-size:11.5px" onclick="exportarDashboard('locomocion')">⬇ Exportar</button>
           <button class="btn btn-red" onclick="openForm('locomocion')">＋ Nueva rendición</button>
         </div>
@@ -589,6 +590,21 @@ td { padding:11px 16px; font-size:12.5px; }
               <div class="chip" onclick="filterBy('locomocion','pendiente',this)">Pendientes</div>
               <div class="chip" onclick="filterBy('locomocion','pagado',this)">Pagados</div>
             </div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <div style="display:flex;gap:6px;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:4px 10px;">
+              <span style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;white-space:nowrap">Act.</span>
+              <input type="date" id="lo_fechaActDesde" onchange="filterFechas('locomocion')" style="border:none;background:transparent;font-size:11px;color:var(--text);font-family:'DM Mono',monospace;outline:none;">
+              <span style="font-size:10px;color:var(--muted)">→</span>
+              <input type="date" id="lo_fechaActHasta" onchange="filterFechas('locomocion')" style="border:none;background:transparent;font-size:11px;color:var(--text);font-family:'DM Mono',monospace;outline:none;">
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:4px 10px;">
+              <span style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;white-space:nowrap">Cre.</span>
+              <input type="date" id="lo_fechaCreDesde" onchange="filterFechas('locomocion')" style="border:none;background:transparent;font-size:11px;color:var(--text);font-family:'DM Mono',monospace;outline:none;">
+              <span style="font-size:10px;color:var(--muted)">→</span>
+              <input type="date" id="lo_fechaCreHasta" onchange="filterFechas('locomocion')" style="border:none;background:transparent;font-size:11px;color:var(--text);font-family:'DM Mono',monospace;outline:none;">
+            </div>
+            <button onclick="limpiarFechas('locomocion')" style="font-size:10px;font-family:'DM Mono',monospace;background:none;border:1px solid var(--border);border-radius:6px;padding:4px 8px;color:var(--muted);cursor:pointer;" title="Limpiar filtros de fecha">✕</button>
           </div>
           <div class="search-box"><span style="color:var(--muted);font-size:13px">⌕</span><input type="text" placeholder="Buscar nombre, folio…" oninput="searchTable('locomocion',this.value)"></div>
         </div>
@@ -710,12 +726,13 @@ td { padding:11px 16px; font-size:12.5px; }
 // ══ CONFIG ═══════════════════════════════════════════════════════════════════
 const CONFIG = {
   empresa: 'CDN Sercotec La Serena',
-  formURLViaticos:      'https://forms.gle/qbJWjSF4mLXyRcHT8',
-  formURLLocomocion:    'https://forms.google.com',  // ← pega URL Google Form Locomoción
-  appsScriptViaticos:   'https://script.google.com/macros/s/AKfycbze_2Mm2KfZWYqHZDS_nu43gc7I3pHvK0ndK3HtrLRGplXiR0nt8eT5BUOJJdMaAKOFLA/exec',
-  appsScriptLocomocion: '',  // ← se conectará después
-  sheetsIdViaticos:     '1rgChKjZRIrv2ZNqCU1BD2FibyUl2ABN7cA8RHfmGwfk',
-  sheetsTab:            'Respuestas de formulario 1',
+  formURLViaticos:       'https://forms.gle/qbJWjSF4mLXyRcHT8',
+  formURLLocomocion:     'https://forms.gle/zEHLGrbS71tX3uLh6',
+  appsScriptViaticos:    'https://script.google.com/macros/s/AKfycbze_2Mm2KfZWYqHZDS_nu43gc7I3pHvK0ndK3HtrLRGplXiR0nt8eT5BUOJJdMaAKOFLA/exec',
+  appsScriptLocomocion:  'https://script.google.com/macros/s/AKfycbyxTvKmUqyux7A7HuRaaQl2pbsAnb7r706htyGS3MZD5vuRlafo3hJJ_MLHE_LNKqvX/exec',
+  sheetsIdViaticos:      '1rgChKjZRIrv2ZNqCU1BD2FibyUl2ABN7cA8RHfmGwfk',
+  sheetsIdLocomocion:    '1u5wnyVRHWqdGq4SPuWkJEZNeL5S5z0VJcr78xc5jsno',
+  sheetsTab:             'Respuestas de formulario 1',
 };
 
 // ══ USUARIOS ═════════════════════════════════════════════════════════════════
@@ -855,12 +872,8 @@ function exportarDashboard(mod, datosIn, periodoLabel, campoLabel, estadoLabel) 
   const isVi = mod === 'viaticos';
 
   let html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard ${modLabel} · CDN Sercotec La Serena</title>
+  <meta name="viewport" content="width=device-width, initial-scale=2.5">
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family:Arial,sans-serif; font-size:12px; color:#1a1f36; background:#fff; padding:28px; }
-    @media(max-width:600px){ body{ padding:12px; font-size:11px; } .header{ flex-direction:column; gap:6px; } table{ font-size:10px; } th,td{ padding:5px 6px; } .kpis{ grid-template-columns:1fr 1fr; gap:8px; } .kpi .val{ font-size:20px; } }
     .no-print { text-align:center; margin-bottom:20px; }
     .no-print button { background:${accentColor};color:white;border:none;padding:10px 28px;border-radius:6px;font-size:13px;cursor:pointer;font-weight:600; }
     .header { border-bottom:3px solid ${accentColor}; padding-bottom:14px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:flex-end; }
@@ -938,7 +951,7 @@ function exportarDashboard(mod, datosIn, periodoLabel, campoLabel, estadoLabel) 
   });
 
   html += `</tbody></table>
-  <div class="footer">CDN Sercotec La Serena - Sistema de Rendiciones desarrollado por Edgar Salinas - Versión 4.4</div>
+  <div class="footer">CDN Sercotec La Serena - Sistema de Rendiciones desarrollado por Edgar Salinas - Versión 4.5</div>
   </body></html>`;
 
   const win = window.open('', '_blank');
@@ -1054,12 +1067,12 @@ function generarReportePDF(datos, periodoLabel, campoLabel, estadoLabel) {
 
   // Construir HTML del reporte
   let html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=600">
   <title>Reporte por Ejecutivo · Viáticos CDN Sercotec</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family: Arial, sans-serif; font-size: 12px; color: #1a1f36; background: #fff; padding: 32px; }
-    @media(max-width:600px){ body{ padding:12px; font-size:11px; } .header{ flex-direction:column; gap:6px; } .resumen{ flex-wrap:wrap; } .kpi{ min-width:calc(50% - 6px); } table{ font-size:10px; display:block; overflow-x:auto; } th,td{ padding:5px 6px; white-space:nowrap; } }
+    @media(max-width:700px){ body{ zoom: 1.8; } }
     .header { border-bottom: 3px solid #d32f2f; padding-bottom: 16px; margin-bottom: 24px; display:flex; justify-content:space-between; align-items:flex-end; }
     .header h1 { font-size: 20px; color: #1565c0; font-weight: 700; }
     .header p { font-size: 11px; color: #8892b0; margin-top: 4px; }
@@ -1152,7 +1165,7 @@ function generarReportePDF(datos, periodoLabel, campoLabel, estadoLabel) {
       <div><div style="font-size:9px;color:#8892b0;text-transform:uppercase;letter-spacing:0.5px">Pagadas</div><strong style="font-size:15px;color:#2e7d52">${fmtCLP(montoGPagado)}</strong></div>
     </div>
   </div>
-  <div class="footer">CDN Sercotec La Serena - Sistema de Rendiciones desarrollado por Edgar Salinas - Versión 4.4</div>
+  <div class="footer">CDN Sercotec La Serena - Sistema de Rendiciones desarrollado por Edgar Salinas - Versión 4.5</div>
   </body></html>`;
 
   // Abrir en nueva ventana para imprimir/guardar como PDF
@@ -1171,20 +1184,17 @@ function openForm(mod) {
 
 // ══ RENDER ALL ════════════════════════════════════════════════════════════════
 function renderAll(mod) {
-  const sheetId = mod === 'viaticos' ? CONFIG.sheetsIdViaticos : '';
+  const sheetId = mod === 'viaticos' ? CONFIG.sheetsIdViaticos : CONFIG.sheetsIdLocomocion;
   if (sheetId) {
     loadFromSheet(mod);
   } else {
-    renderKPIs(mod);
-    renderBarChart(mod);
-    renderDonut(mod);
-    renderTable(mod);
+    renderKPIs(mod); renderBarChart(mod); renderDonut(mod); renderTable(mod);
   }
 }
 
 function loadFromSheet(mod) {
   const p    = mod === 'viaticos' ? 'vi' : 'lo';
-  const sheetId = mod === 'viaticos' ? CONFIG.sheetsIdViaticos : '';
+  const sheetId = mod === 'viaticos' ? CONFIG.sheetsIdViaticos : CONFIG.sheetsIdLocomocion;
   const cols = mod === 'viaticos' ? 8 : 7;
 
   document.getElementById(`${p}_tableBody`).innerHTML =
@@ -1237,49 +1247,75 @@ function parseSheetCSV(csv, mod) {
     return rows;
   }
 
-  const rows = parseCSVFull(csv);
-  if (rows.length < 2) return [];
-
-  const COL_ESTADO  = 44; // AO índice 0-based
-  const COL_FOLIO   = 45; // AP
-  const COL_URL_PDF = 46; // AQ
-
   function fmtDate(val) {
     if (!val) return '';
     // Google Sheets CSV: "D/M/YYYY HH:MM:SS" — grupo 1=DÍA, grupo 2=MES
     const m1 = val.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
     if (m1) return `${m1[1].padStart(2,'0')}-${m1[2].padStart(2,'0')}-${m1[3]}`;
-    // Ya en formato DD-MM-YYYY
     const m2 = val.match(/^(\d{2})-(\d{2})-(\d{4})/);
     if (m2) return val;
     return val;
   }
 
-  // Formato de visualización: DD/MM/YYYY (internamente se guarda DD-MM-YYYY para ordenar)
   function displayDate(val) {
     if (!val) return '';
     return val.replace(/-/g, '/');
   }
+
+  const rows = parseCSVFull(csv);
+  if (rows.length < 2) return [];
+
+  if (mod === 'locomocion') {
+    // Columnas Locomoción:
+    // A(0)=Marca temporal, B(1)=FUNCIONARIO, C(2)=RUT, D(3)=FECHA ACTIVIDAD,
+    // E(4)=DESTINO, F(5)=ACTIVIDAD, G(6)=ACTIVIDAD2, H(7)=MONTO,
+    // I(8)=FIRMA, J(9)=FOTO, K(10)=Dirección correo, L(11)=FECHA SOLICITUD,
+    // M(12)=PDF, N(13)=ESTADO, O(14)=FOLIO
+    return rows.slice(1).map((row, i) => {
+      const monto = Number(String(row[7]||'0').replace(/[^0-9]/g,'')) || 0;
+      const status = (row[13] && row[13] !== '') ? row[13] : 'recepcionado';
+      const fechaActInt    = fmtDate(row[3]) || '';
+      const fechaCreateInt = fmtDate(row[0]) || '';
+      return {
+        rowIndex:           i + 2,
+        folio:              row[14] || '',
+        name:               row[1]  || '',
+        comuna:             '',           // Locomoción no tiene comuna
+        fechaAct:           fechaActInt,
+        fechaCreate:        fechaCreateInt,
+        fechaActDisplay:    displayDate(fechaActInt),
+        fechaCreateDisplay: displayDate(fechaCreateInt),
+        amount:             monto,
+        status:             status,
+        driveURL:           row[12] || '',
+      };
+    }).filter(r => r.name !== '');
+  }
+
+  // Viáticos (lógica original intacta)
+  const COL_ESTADO  = 44; // AO índice 0-based
+  const COL_FOLIO   = 45; // AP
+  const COL_URL_PDF = 46; // AQ
 
   return rows.slice(1).map((row, i) => {
     const montoRaw = row[36] || row[9] || '0';
     const monto = Number(String(montoRaw).replace(/[^0-9]/g, '')) || 0;
     const status = (row[COL_ESTADO] && row[COL_ESTADO] !== '')
       ? row[COL_ESTADO] : 'recepcionado';
-    const fechaActInt    = fmtDate(row[4])  || ''; // DD-MM-YYYY interno
-    const fechaCreateInt = fmtDate(row[0])  || ''; // DD-MM-YYYY interno
+    const fechaActInt    = fmtDate(row[4])  || '';
+    const fechaCreateInt = fmtDate(row[0])  || '';
     return {
-      rowIndex:    i + 2,
-      folio:       row[COL_FOLIO]              || '',
-      name:        row[2]                      || '',
-      comuna:      row[5]                      || '',
-      fechaAct:    fechaActInt,                    // usado para filtros y gráfico
-      fechaCreate: fechaCreateInt,                 // usado para ordenar
-      fechaActDisplay:    displayDate(fechaActInt),    // DD/MM/YYYY para tabla
-      fechaCreateDisplay: displayDate(fechaCreateInt), // DD/MM/YYYY para tabla
-      amount:      monto,
-      status:      status,
-      driveURL:    row[COL_URL_PDF]            || '',
+      rowIndex:           i + 2,
+      folio:              row[COL_FOLIO]   || '',
+      name:               row[2]           || '',
+      comuna:             row[5]           || '',
+      fechaAct:           fechaActInt,
+      fechaCreate:        fechaCreateInt,
+      fechaActDisplay:    displayDate(fechaActInt),
+      fechaCreateDisplay: displayDate(fechaCreateInt),
+      amount:             monto,
+      status:             status,
+      driveURL:           row[COL_URL_PDF] || '',
     };
   }).filter(r => r.name !== '');
 }
