@@ -391,7 +391,7 @@ td { padding:11px 16px; font-size:12.5px; }
     </div>
     <button class="login-btn" onclick="doLogin()">Ingresar al sistema</button>
     <div class="login-error" id="loginError">Usuario o contraseña incorrectos</div>
-    <div class="login-hint">Sistema desarrollado por Edgar Salinas<br>Versión 3.8</div>
+    <div class="login-hint">Sistema desarrollado por Edgar Salinas<br>Versión 4.0</div>
   </div>
 </div>
 
@@ -729,27 +729,10 @@ const USERS = [
 ];
 
 // ══ DATOS VIÁTICOS ════════════════════════════════════════════════════════════
-let DATA_VI = [
-  { folio:'VT-008', name:'Edgar Salinas',      comuna:'La Serena',     fechaAct:'03-Jun-2025', fechaCreate:'04-Jun-2025', amount:285000, status:'pagado',       driveURL:'https://drive.google.com' },
-  { folio:'',       name:'Víctor Morales',     comuna:'Coquimbo',      fechaAct:'01-Jun-2026', fechaCreate:'02-Jun-2026', amount:142000, status:'pendiente',    driveURL:'https://drive.google.com' },
-  { folio:'VT-006', name:'Karol Urrutia',      comuna:'Ovalle',        fechaAct:'29-May-2025', fechaCreate:'30-May-2025', amount:98500,  status:'pagado',       driveURL:'https://drive.google.com' },
-  { folio:'VT-005', name:'Carolina Riquelme',  comuna:'Illapel',       fechaAct:'27-May-2025', fechaCreate:'28-May-2025', amount:315000, status:'pagado',       driveURL:'https://drive.google.com' },
-  { folio:'',       name:'Josip Sekul',        comuna:'Vicuña',        fechaAct:'25-Feb-2026', fechaCreate:'25-Feb-2026', amount:76000,  status:'recepcionado', driveURL:'' },
-  { folio:'',       name:'Edgar Salinas',      comuna:'Salamanca',     fechaAct:'22-Feb-2026', fechaCreate:'23-Feb-2026', amount:520000, status:'pendiente',    driveURL:'https://drive.google.com' },
-  { folio:'',       name:'Víctor Morales',     comuna:'Los Vilos',     fechaAct:'20-Feb-2026', fechaCreate:'21-Feb-2026', amount:88000,  status:'pendiente',    driveURL:'https://drive.google.com' },
-  { folio:'',       name:'Karol Urrutia',      comuna:'Andacollo',     fechaAct:'18-Feb-2026', fechaCreate:'19-Feb-2026', amount:45000,  status:'recepcionado', driveURL:'' },
-];
+let DATA_VI = [];
 
 // ══ DATOS LOCOMOCIÓN ══════════════════════════════════════════════════════════
-let DATA_LO = [
-  { folio:'LC-008', name:'Edgar Salinas',      fechaAct:'04-Jun-2025', fechaCreate:'04-Jun-2025', amount:12500,  status:'pagado',       driveURL:'https://drive.google.com' },
-  { folio:'',       name:'Víctor Morales',     fechaAct:'02-Feb-2026', fechaCreate:'02-Feb-2026', amount:8400,   status:'pendiente',    driveURL:'https://drive.google.com' },
-  { folio:'LC-006', name:'Karol Urrutia',      fechaAct:'30-May-2025', fechaCreate:'31-May-2025', amount:15600,  status:'pagado',       driveURL:'https://drive.google.com' },
-  { folio:'',       name:'Carolina Riquelme',  fechaAct:'28-Feb-2026', fechaCreate:'28-Feb-2026', amount:9200,   status:'pendiente',    driveURL:'https://drive.google.com' },
-  { folio:'',       name:'Josip Sekul',        fechaAct:'25-Feb-2026', fechaCreate:'26-Feb-2026', amount:11000,  status:'recepcionado', driveURL:'' },
-  { folio:'LC-003', name:'Edgar Salinas',      fechaAct:'22-May-2025', fechaCreate:'22-May-2025', amount:7800,   status:'pagado',       driveURL:'https://drive.google.com' },
-  { folio:'',       name:'Víctor Morales',     fechaAct:'20-Feb-2026', fechaCreate:'21-Feb-2026', amount:13400,  status:'recepcionado', driveURL:'' },
-];
+let DATA_LO = [];
 
 // ══ STATE ═════════════════════════════════════════════════════════════════════
 let currentUser = null;
@@ -953,7 +936,7 @@ function exportarDashboard(mod, datosIn, periodoLabel, campoLabel, estadoLabel) 
   });
 
   html += `</tbody></table>
-  <div class="footer">CDN Sercotec La Serena - Sistema de Rendiciones desarrollado por Edgar Salinas - Versión 3.8</div>
+  <div class="footer">CDN Sercotec La Serena - Sistema de Rendiciones desarrollado por Edgar Salinas - Versión 4.0</div>
   </body></html>`;
 
   const win = window.open('', '_blank');
@@ -1164,7 +1147,7 @@ function generarReportePDF(datos, periodoLabel, campoLabel, estadoLabel) {
       <div><div style="font-size:9px;color:#8892b0;text-transform:uppercase;letter-spacing:0.5px">Pagadas</div><strong style="font-size:15px;color:#2e7d52">${fmtCLP(montoGPagado)}</strong></div>
     </div>
   </div>
-  <div class="footer">CDN Sercotec La Serena - Sistema de Rendiciones desarrollado por Edgar Salinas - Versión 3.8</div>
+  <div class="footer">CDN Sercotec La Serena - Sistema de Rendiciones desarrollado por Edgar Salinas - Versión 4.0</div>
   </body></html>`;
 
   // Abrir en nueva ventana para imprimir/guardar como PDF
@@ -1183,8 +1166,8 @@ function openForm(mod) {
 
 // ══ RENDER ALL ════════════════════════════════════════════════════════════════
 function renderAll(mod) {
-  const url = mod === 'viaticos' ? CONFIG.appsScriptViaticos : CONFIG.appsScriptLocomocion;
-  if (url) {
+  const sheetId = mod === 'viaticos' ? CONFIG.sheetsIdViaticos : '';
+  if (sheetId) {
     loadFromSheet(mod);
   } else {
     renderKPIs(mod);
@@ -1215,7 +1198,8 @@ function loadFromSheet(mod) {
       if (mod === 'viaticos') DATA_VI = data;
       else                    DATA_LO = data;
       renderKPIs(mod); renderBarChart(mod); renderDonut(mod); renderTable(mod); updatePills();
-      document.getElementById('updateTime').textContent =
+      const timeEl = document.getElementById('updateTime');
+      if (timeEl) timeEl.textContent =
         'Actualizado desde Google Sheets · ' + new Date().toLocaleTimeString('es-CL');
       showToast('✓ ' + data.length + ' registros cargados');
     })
@@ -1227,21 +1211,29 @@ function loadFromSheet(mod) {
 }
 
 function parseSheetCSV(csv, mod) {
-  // Parser CSV robusto que maneja comas dentro de comillas
-  function parseRow(line) {
-    const result = []; let cur = ''; let inQ = false;
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i];
-      if (ch === '"') { if (inQ && line[i+1] === '"') { cur += '"'; i++; } else inQ = !inQ; }
-      else if (ch === ',' && !inQ) { result.push(cur.trim()); cur = ''; }
-      else cur += ch;
+  // Parser CSV robusto que maneja comas y saltos de línea dentro de comillas
+  function parseCSVFull(text) {
+    const rows = []; let cur = []; let field = ''; let inQ = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i], nx = text[i+1];
+      if (inQ) {
+        if (ch === '"' && nx === '"') { field += '"'; i++; }
+        else if (ch === '"') { inQ = false; }
+        else { field += ch; }
+      } else {
+        if (ch === '"') { inQ = true; }
+        else if (ch === ',') { cur.push(field.trim()); field = ''; }
+        else if (ch === '\n') { cur.push(field.trim()); rows.push(cur); cur = []; field = ''; }
+        else if (ch === '\r') { /* ignorar */ }
+        else { field += ch; }
+      }
     }
-    result.push(cur.trim());
-    return result;
+    if (field || cur.length) { cur.push(field.trim()); rows.push(cur); }
+    return rows;
   }
 
-  const lines = csv.split('\n').filter(l => l.trim());
-  if (lines.length < 2) return [];
+  const rows = parseCSVFull(csv);
+  if (rows.length < 2) return [];
 
   const COL_ESTADO  = 44; // AO índice 0-based
   const COL_FOLIO   = 45; // AP
@@ -1249,16 +1241,12 @@ function parseSheetCSV(csv, mod) {
 
   function fmtDate(val) {
     if (!val) return '';
-    // Formato: "M/D/YYYY HH:MM:SS" o "DD-MM-YYYY"
     const m1 = val.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
     if (m1) return `${m1[2].padStart(2,'0')}-${m1[1].padStart(2,'0')}-${m1[3]}`;
-    const m2 = val.match(/^(\d{1,2})-(\d{1,2})-(\d{4})/);
-    if (m2) return val;
     return val;
   }
 
-  return lines.slice(1).map((line, i) => {
-    const row = parseRow(line);
+  return rows.slice(1).map((row, i) => {
     const montoRaw = row[36] || row[9] || '0';
     const monto = Number(String(montoRaw).replace(/[^0-9]/g, '')) || 0;
     const status = (row[COL_ESTADO] && row[COL_ESTADO] !== '')
