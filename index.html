@@ -391,7 +391,7 @@ td { padding:11px 16px; font-size:12.5px; }
     </div>
     <button class="login-btn" onclick="doLogin()">Ingresar al sistema</button>
     <div class="login-error" id="loginError">Usuario o contraseña incorrectos</div>
-    <div class="login-hint">Sistema desarrollado por Edgar Salinas<br>Versión 4.0</div>
+    <div class="login-hint">Sistema desarrollado por Edgar Salinas<br>Versión 4.2</div>
   </div>
 </div>
 
@@ -928,15 +928,15 @@ function exportarDashboard(mod, datosIn, periodoLabel, campoLabel, estadoLabel) 
       <td style="font-family:monospace;font-size:10px">${r.folio||'PENDIENTE'}</td>
       <td>${r.name}</td>
       ${isVi ? `<td>${r.comuna||'—'}</td>` : ''}
-      <td>${r.fechaAct||'—'}</td>
-      <td>${r.fechaCreate||'—'}</td>
+      <td>${r.fechaActDisplay||r.fechaAct||'—'}</td>
+      <td>${r.fechaCreateDisplay||r.fechaCreate||'—'}</td>
       <td style="font-weight:600">${fmtCLP(r.amount)}</td>
       <td><span class="badge" style="background:${estadoColor[r.status]||'#8892b0'}">${estadoLabelMap[r.status]||r.status}</span></td>
     </tr>`;
   });
 
   html += `</tbody></table>
-  <div class="footer">CDN Sercotec La Serena - Sistema de Rendiciones desarrollado por Edgar Salinas - Versión 4.0</div>
+  <div class="footer">CDN Sercotec La Serena - Sistema de Rendiciones desarrollado por Edgar Salinas - Versión 4.2</div>
   </body></html>`;
 
   const win = window.open('', '_blank');
@@ -1023,13 +1023,14 @@ function ejecutarReporte() {
   const estados = getEstadosFiltro();
   const datos  = filtrarDatosReporte(DATA_VI, desde, hasta, campo, estados);
   if (datos.length === 0) { showToast('⚠ Sin registros con los filtros seleccionados'); return; }
+  const tipoActual = reporteTipo; // guardar antes de cerrar modal
   closeReporteModal();
   const periodoLabel = desde || hasta
     ? ` · ${desde ? desde.split('-').reverse().join('/') : '…'} → ${hasta ? hasta.split('-').reverse().join('/') : '…'}`
     : '';
   const campoLabel = campo === 'fechaAct' ? 'Fecha actividad' : 'Fecha creación';
   const estadoLabel = estados ? estados.map(e => ({recepcionado:'Recepcionadas',pendiente:'Pendientes',pagado:'Pagadas'})[e]).join(', ') : 'Todos los estados';
-  if (reporteTipo === 'ejecutivo') generarReportePDF(datos, periodoLabel, campoLabel, estadoLabel);
+  if (tipoActual === 'ejecutivo') generarReportePDF(datos, periodoLabel, campoLabel, estadoLabel);
   else exportarDashboard('viaticos', datos, periodoLabel, campoLabel, estadoLabel);
 }
 
@@ -1119,8 +1120,8 @@ function generarReportePDF(datos, periodoLabel, campoLabel, estadoLabel) {
       html += `<tr>
         <td style="font-family:monospace;font-size:10px">${folio}</td>
         <td>${r.comuna || '—'}</td>
-        <td>${r.fechaAct || '—'}</td>
-        <td>${r.fechaCreate || '—'}</td>
+        <td>${r.fechaActDisplay||r.fechaAct || '—'}</td>
+        <td>${r.fechaCreateDisplay||r.fechaCreate || '—'}</td>
         <td style="font-weight:600">${fmtCLP(r.amount)}</td>
         <td><span class="badge" style="background:${color}">${estadoMap[r.status] || r.status}</span></td>
       </tr>`;
@@ -1147,7 +1148,7 @@ function generarReportePDF(datos, periodoLabel, campoLabel, estadoLabel) {
       <div><div style="font-size:9px;color:#8892b0;text-transform:uppercase;letter-spacing:0.5px">Pagadas</div><strong style="font-size:15px;color:#2e7d52">${fmtCLP(montoGPagado)}</strong></div>
     </div>
   </div>
-  <div class="footer">CDN Sercotec La Serena - Sistema de Rendiciones desarrollado por Edgar Salinas - Versión 4.0</div>
+  <div class="footer">CDN Sercotec La Serena - Sistema de Rendiciones desarrollado por Edgar Salinas - Versión 4.2</div>
   </body></html>`;
 
   // Abrir en nueva ventana para imprimir/guardar como PDF
@@ -1241,9 +1242,19 @@ function parseSheetCSV(csv, mod) {
 
   function fmtDate(val) {
     if (!val) return '';
+    // Google Sheets CSV: "M/D/YYYY HH:MM:SS" o "M/D/YYYY"
     const m1 = val.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
     if (m1) return `${m1[2].padStart(2,'0')}-${m1[1].padStart(2,'0')}-${m1[3]}`;
+    // Ya en formato DD-MM-YYYY
+    const m2 = val.match(/^(\d{2})-(\d{2})-(\d{4})/);
+    if (m2) return val;
     return val;
+  }
+
+  // Formato de visualización: DD/MM/YYYY (internamente se guarda DD-MM-YYYY para ordenar)
+  function displayDate(val) {
+    if (!val) return '';
+    return val.replace(/-/g, '/');
   }
 
   return rows.slice(1).map((row, i) => {
@@ -1251,16 +1262,20 @@ function parseSheetCSV(csv, mod) {
     const monto = Number(String(montoRaw).replace(/[^0-9]/g, '')) || 0;
     const status = (row[COL_ESTADO] && row[COL_ESTADO] !== '')
       ? row[COL_ESTADO] : 'recepcionado';
+    const fechaActInt    = fmtDate(row[4])  || ''; // DD-MM-YYYY interno
+    const fechaCreateInt = fmtDate(row[0])  || ''; // DD-MM-YYYY interno
     return {
       rowIndex:    i + 2,
-      folio:       row[COL_FOLIO]   || '',
-      name:        row[2]           || '',
-      comuna:      row[5]           || '',
-      fechaAct:    fmtDate(row[4])  || '',
-      fechaCreate: fmtDate(row[0])  || '',
+      folio:       row[COL_FOLIO]              || '',
+      name:        row[2]                      || '',
+      comuna:      row[5]                      || '',
+      fechaAct:    fechaActInt,                    // usado para filtros y gráfico
+      fechaCreate: fechaCreateInt,                 // usado para ordenar
+      fechaActDisplay:    displayDate(fechaActInt),    // DD/MM/YYYY para tabla
+      fechaCreateDisplay: displayDate(fechaCreateInt), // DD/MM/YYYY para tabla
       amount:      monto,
       status:      status,
-      driveURL:    row[COL_URL_PDF] || '',
+      driveURL:    row[COL_URL_PDF]            || '',
     };
   }).filter(r => r.name !== '');
 }
@@ -1323,13 +1338,15 @@ function renderBarChart(mod) {
   const wrap = document.getElementById(`${p}_barChart`);
   const monthNames = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
-  // Agrupar montos por mes usando fechaAct real
+  // Agrupar montos por mes usando fechaAct real (formato DD-MM-YYYY)
   const totals = {};
   D.forEach(r => {
     if (!r.fechaAct) return;
-    const parts = r.fechaAct.match(/(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})/);
+    // Soporta DD-MM-YYYY
+    const parts = r.fechaAct.match(/^(\d{2})-(\d{2})-(\d{4})$/);
     if (!parts) return;
-    const mes  = parseInt(parts[2], 10) - 1;
+    const dia  = parts[1];
+    const mes  = parseInt(parts[2], 10) - 1; // 0-based
     const anio = parts[3];
     const key  = `${anio}-${String(mes+1).padStart(2,'0')}`;
     if (!totals[key]) totals[key] = { mes, anio, total: 0 };
@@ -1477,8 +1494,8 @@ function renderTable(mod) {
       <td>${folioCell}</td>
       <td><div class="td-name"><div class="mini-avatar" style="background:${col}22;color:${col}">${ini}</div><span>${r.name}</span></div></td>
       ${comunaCell}
-      <td><span class="date-cell">${r.fechaAct}</span></td>
-      <td><span class="date-cell">${r.fechaCreate}</span></td>
+      <td><span class="date-cell">${r.fechaActDisplay || r.fechaAct}</span></td>
+      <td><span class="date-cell">${r.fechaCreateDisplay || r.fechaCreate}</span></td>
       <td><span class="amount-cell">${fmt(r.amount)}</span></td>
       <td>${statusBadge(r.status)}</td>
       <td><div style="display:flex;gap:4px;justify-content:center">${pdfBtn}${editBtn}${payBtn}</div></td>
