@@ -392,7 +392,7 @@ td { padding:11px 16px; font-size:12.5px; }
     </div>
     <button class="login-btn" onclick="doLogin()">Ingresar al sistema</button>
     <div class="login-error" id="loginError">Usuario o contraseña incorrectos</div>
-    <div class="login-hint">Sistema desarrollado por Edgar Salinas<br>Versión 4.7.2</div>
+    <div class="login-hint">Sistema desarrollado por Edgar Salinas<br>Versión 4.7.3</div>
   </div>
 </div>
 
@@ -952,7 +952,7 @@ function exportarDashboard(mod, datosIn, periodoLabel, campoLabel, estadoLabel) 
   });
 
   html += `</tbody></table>
-  <div class="footer">CDN Sercotec La Serena - Sistema de Rendiciones desarrollado por Edgar Salinas - Versión 4.7.2</div>
+  <div class="footer">CDN Sercotec La Serena - Sistema de Rendiciones desarrollado por Edgar Salinas - Versión 4.7.3</div>
   </body></html>`;
 
   const win = window.open('', '_blank');
@@ -1172,7 +1172,7 @@ function generarReportePDF(datos, periodoLabel, campoLabel, estadoLabel, mod) {
       <div><div style="font-size:9px;color:#8892b0;text-transform:uppercase;letter-spacing:0.5px">Pagadas</div><strong style="font-size:15px;color:#2e7d52">${fmtCLP(montoGPagado)}</strong></div>
     </div>
   </div>
-  <div class="footer">CDN Sercotec La Serena - Sistema de Rendiciones desarrollado por Edgar Salinas - Versión 4.7.2</div>
+  <div class="footer">CDN Sercotec La Serena - Sistema de Rendiciones desarrollado por Edgar Salinas - Versión 4.7.3</div>
   </body></html>`;
 
   // Abrir en nueva ventana para imprimir/guardar como PDF
@@ -1464,9 +1464,13 @@ function statusBadge(s) {
 
 function parseDate(str) {
   if (!str) return null;
-  // Soporta DD-MM-YYYY y YYYY-MM-DD
+  // Soporta DD-MM-YYYY
   let m = str.match(/^(\d{2})-(\d{2})-(\d{4})$/);
   if (m) return new Date(`${m[3]}-${m[2]}-${m[1]}`);
+  // Soporta DD/MM/YYYY
+  m = str.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (m) return new Date(`${m[3]}-${m[2]}-${m[1]}`);
+  // Soporta YYYY-MM-DD
   m = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (m) return new Date(str);
   return null;
