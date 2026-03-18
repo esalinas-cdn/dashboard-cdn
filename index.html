@@ -392,7 +392,7 @@ td { padding:11px 16px; font-size:12.5px; }
     </div>
     <button class="login-btn" onclick="doLogin()">Ingresar al sistema</button>
     <div class="login-error" id="loginError">Usuario o contraseña incorrectos</div>
-    <div class="login-hint">Sistema desarrollado por Edgar Salinas<br>Versión 4.7.4</div>
+    <div class="login-hint">Sistema desarrollado por Edgar Salinas<br>Versión 4.8</div>
   </div>
 </div>
 
@@ -492,6 +492,19 @@ td { padding:11px 16px; font-size:12.5px; }
               </svg>
             </div>
             <div class="stat-list" id="vi_statList"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Distribución por comuna</div>
+          <div class="donut-panel">
+            <div class="donut-side">
+              <svg class="donut-svg" viewBox="0 0 42 42" id="vi_comunaSvg">
+                <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#eef0f7" stroke-width="6"/>
+                <text x="21" y="22" text-anchor="middle" font-size="6" fill="#1a1f36" font-family="Syne,sans-serif" font-weight="700" id="vi_comunaCenter">0</text>
+                <text x="21" y="27" text-anchor="middle" font-size="2.8" fill="#8892b0" font-family="DM Mono,monospace">comunas</text>
+              </svg>
+            </div>
+            <div class="stat-list" id="vi_comunaList"></div>
           </div>
         </div>
       </div>
@@ -952,7 +965,7 @@ function exportarDashboard(mod, datosIn, periodoLabel, campoLabel, estadoLabel) 
   });
 
   html += `</tbody></table>
-  <div class="footer">CDN Sercotec La Serena - Sistema de Rendiciones desarrollado por Edgar Salinas - Versión 4.7.4</div>
+  <div class="footer">CDN Sercotec La Serena - Sistema de Rendiciones desarrollado por Edgar Salinas - Versión 4.8</div>
   </body></html>`;
 
   const win = window.open('', '_blank');
@@ -1172,7 +1185,7 @@ function generarReportePDF(datos, periodoLabel, campoLabel, estadoLabel, mod) {
       <div><div style="font-size:9px;color:#8892b0;text-transform:uppercase;letter-spacing:0.5px">Pagadas</div><strong style="font-size:15px;color:#2e7d52">${fmtCLP(montoGPagado)}</strong></div>
     </div>
   </div>
-  <div class="footer">CDN Sercotec La Serena - Sistema de Rendiciones desarrollado por Edgar Salinas - Versión 4.7.4</div>
+  <div class="footer">CDN Sercotec La Serena - Sistema de Rendiciones desarrollado por Edgar Salinas - Versión 4.8</div>
   </body></html>`;
 
   // Abrir en nueva ventana para imprimir/guardar como PDF
@@ -1454,9 +1467,74 @@ function renderDonut(mod) {
     { label:'Pendiente de pago',qty:pend.length,  color:'#b45309',sum:sumOf(pend)  },
     { label:'Recepcionado',     qty:recep.length, color:recepColor, bg:'#e8f0fe',         sum:sumOf(recep) },
   ].map(s=>`<div class="stat-item"><div class="stat-dot" style="background:${s.color}"></div><div class="stat-info"><div class="stat-name">${s.label}</div><div class="stat-qty">${s.qty} rendición${s.qty!==1?'es':''}</div></div><div class="stat-amount" style="color:${s.color}">${fmt(s.sum)}</div></div>`).join('');
+
+  // Gráfico de comunas — solo para viáticos
+  if (mod === 'viaticos') renderDonutComunas();
 }
 
-// ══ TABLE ═════════════════════════════════════════════════════════════════════
+// ══ DONUT COMUNAS (solo Viáticos) ═════════════════════════════════════════════
+function renderDonutComunas() {
+  const D = getData('viaticos');
+  const total = D.length || 1;
+
+  // Paleta de colores para comunas
+  const palette = ['#1565c0','#7c3aed','#0891b2','#b45309','#2e7d52','#d32f2f','#0d6e6e','#7e5c00','#1a3a6b','#4a1080'];
+
+  // Agrupar por comuna
+  const comunas = {};
+  D.forEach(r => {
+    const c = (r.comuna && r.comuna.trim()) ? r.comuna.trim() : 'Sin comuna';
+    if (!comunas[c]) comunas[c] = 0;
+    comunas[c]++;
+  });
+
+  // Ordenar por cantidad descendente
+  const sorted = Object.entries(comunas).sort((a,b) => b[1]-a[1]);
+  const numComunas = sorted.length;
+
+  // Actualizar centro del SVG
+  document.getElementById('vi_comunaCenter').textContent = numComunas;
+
+  // Generar arcos del donut dinámicamente
+  const svg = document.getElementById('vi_comunaSvg');
+  // Limpiar arcos anteriores (mantener círculo base y textos)
+  svg.querySelectorAll('.comuna-arc').forEach(el => el.remove());
+
+  let offset = 25;
+  sorted.forEach(([comuna, qty], i) => {
+    const pct = qty / total * 100;
+    const col = palette[i % palette.length];
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('class', 'comuna-arc');
+    circle.setAttribute('cx', '21');
+    circle.setAttribute('cy', '21');
+    circle.setAttribute('r', '15.915');
+    circle.setAttribute('fill', 'transparent');
+    circle.setAttribute('stroke', col);
+    circle.setAttribute('stroke-width', '6');
+    circle.setAttribute('stroke-dasharray', `${pct} ${100-pct}`);
+    circle.setAttribute('stroke-dashoffset', offset);
+    // Insertar antes de los textos
+    svg.insertBefore(circle, svg.querySelector('text'));
+    offset -= pct;
+  });
+
+  // Generar lista lateral
+  document.getElementById('vi_comunaList').innerHTML = sorted.map(([comuna, qty], i) => {
+    const pct = Math.round(qty / total * 100);
+    const col = palette[i % palette.length];
+    return `<div class="stat-item">
+      <div class="stat-dot" style="background:${col}"></div>
+      <div class="stat-info">
+        <div class="stat-name">${comuna}</div>
+        <div class="stat-qty">${qty} viático${qty!==1?'s':''} · ${pct}%</div>
+      </div>
+      <div style="font-size:11px;font-weight:700;color:${col};font-family:'DM Mono',monospace;">${qty}</div>
+    </div>`;
+  }).join('');
+}
+
+
 const avatarColors = ['#1565c0','#7c3aed','#0891b2','#b45309','#d32f2f','#2e7d52'];
 
 function statusBadge(s) {
