@@ -392,7 +392,7 @@ td { padding:11px 16px; font-size:12.5px; }
     </div>
     <button class="login-btn" onclick="doLogin()">Ingresar al sistema</button>
     <div class="login-error" id="loginError">Usuario o contraseña incorrectos</div>
-    <div class="login-hint">Sistema desarrollado por Edgar Salinas<br>Versión 4.8.1</div>
+    <div class="login-hint">Sistema desarrollado por Edgar Salinas<br>Versión 4.8.2</div>
   </div>
 </div>
 
@@ -978,7 +978,7 @@ function exportarDashboard(mod, datosIn, periodoLabel, campoLabel, estadoLabel) 
   });
 
   html += `</tbody></table>
-  <div class="footer">CDN Sercotec La Serena - Sistema de Rendiciones desarrollado por Edgar Salinas - Versión 4.8.1</div>
+  <div class="footer">CDN Sercotec La Serena - Sistema de Rendiciones desarrollado por Edgar Salinas - Versión 4.8.2</div>
   </body></html>`;
 
   const win = window.open('', '_blank');
@@ -1198,7 +1198,7 @@ function generarReportePDF(datos, periodoLabel, campoLabel, estadoLabel, mod) {
       <div><div style="font-size:9px;color:#8892b0;text-transform:uppercase;letter-spacing:0.5px">Pagadas</div><strong style="font-size:15px;color:#2e7d52">${fmtCLP(montoGPagado)}</strong></div>
     </div>
   </div>
-  <div class="footer">CDN Sercotec La Serena - Sistema de Rendiciones desarrollado por Edgar Salinas - Versión 4.8.1</div>
+  <div class="footer">CDN Sercotec La Serena - Sistema de Rendiciones desarrollado por Edgar Salinas - Versión 4.8.2</div>
   </body></html>`;
 
   // Abrir en nueva ventana para imprimir/guardar como PDF
@@ -1333,9 +1333,19 @@ function parseSheetCSV(csv, mod) {
   const COL_FOLIO   = 45; // AP
   const COL_URL_PDF = 46; // AQ
 
+  const parseMonto = (val) => {
+    if (!val && val !== 0) return 0;
+    // Eliminar símbolo $, puntos de miles y espacios; respetar punto decimal
+    const clean = String(val).replace(/[$\s]/g,'').replace(/\.(?=\d{3})/g,'').replace(',','.');
+    const n = parseFloat(clean);
+    return isNaN(n) ? 0 : Math.round(n);
+  };
+
   return rows.slice(1).map((row, i) => {
-    const montoRaw = row[36] || row[9] || '0';
-    const monto = Number(String(montoRaw).replace(/[^0-9]/g, '')) || 0;
+    // Prioridad: AK(36)=MONTO A PAGAR → J(9)=MONTO VIÁTICO → 0
+    const montoAK = parseMonto(row[36]);
+    const montoJ  = parseMonto(row[9]);
+    const monto   = montoAK || montoJ || 0;
     const status = (row[COL_ESTADO] && row[COL_ESTADO] !== '')
       ? row[COL_ESTADO] : 'recepcionado';
     const fechaActInt    = fmtDate(row[4])  || '';
